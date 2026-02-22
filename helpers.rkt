@@ -45,3 +45,18 @@
       ((list? (car lis) (getValues (cdr lis) state (lambda (list) (return (cons list (lineParser (car lis) state)))))))
       ((or (bool? (car lis)) (number? (car lis))) (getValues (cdr lis) state (lambda (list) (return (cons list (car lis))))))
       (getValues (cdr lis) state (lambda (list) (return (cons list (lookupBinding (car lis) state))))))))
+
+(define condition
+  (lambda (lis state)
+    (lineParser (car lis) state)))
+
+(define body
+  (lambda (lis state)
+    (lineParser (cadr lis) state)))
+
+
+(define else*
+  (lambda (lis state)
+    (cond
+      (eq? 'if (car lis) (cdr (cdr (cdr lis))))
+      (cdr (cdr lis)))))
