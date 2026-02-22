@@ -36,9 +36,3 @@
       ((null? lis) 0)
       ((null? (cdr lis)) (car lis))
       (modulo* (cdr lis) (lambda (remainder) (return (modulo remainder (modulo (car lis) (cdr lis)))))))))
-
-(define unary
-  (lambda (x)
-    (* x -1)))
-      
-      
