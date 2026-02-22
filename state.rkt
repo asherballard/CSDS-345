@@ -8,7 +8,14 @@
 (define getValue (lambda (binding) (cadr binding)))
 (define voidState (makePairedList null null))
 
-; addBinding, but name shows you're supposed to use it as a value
+
+; Abstracts state structure away from interpreter
+(define isDeclared?
+  (lambda (name state)
+    (memberOf? name (getNameList state))
+    )
+  )
+                
 (define stateWith
   (lambda (name value state)
     (define newNames (cons name (getNameList state)))
@@ -22,8 +29,14 @@
 (define lookupBinding
   (lambda (name state)
     (define index (indexof name (getNameList state)))
-    (if (eq? -1 index) (error "Error: Attempted to use undefined variable")
-        (getElement index (getValueList state) echo)
+    (if (eq? -1 index)
+        (error "Error: attempted to access undeclared variable")
+        
+        ; Wacky notation to avoid calling getElement twice
+        ((lambda (value) (if (null? value)
+            (error "Error: attempted to access undefined variable")
+            value
+            )) (getElement index (getValueList state) echo))
         )
     )
   )
@@ -49,15 +62,20 @@
 ; Binds name to null, returns updated state
 (define declare
   (lambda (name state)
-    (stateWith name null state)
+    (if (memberOf? name (getNameList state))
+        (error "Variable re-declared")
+        (stateWith name null state)
+        )
     )
   )
 
 ; Handles variable declaration, either with null or value
+; Currently unused to avoid calling evaluators within state functions
+; (i.e. the state manager should only receive final values to avoid cross-contamination)
 (define bindVariable
   (lambda (args state)
     (if (null? (cdr args))
-        (declare (primary (args)) state)
-        (assign (primary (args)) (secondary (args)) state))
+        (declare (primary args) state)
+        (assign (primary args) (secondary args) state))
     )
   )

@@ -1,15 +1,25 @@
 #lang racket
 (provide (all-defined-out))
 
-; Definitions related to syntax structure
+; =================
+; SYNTAX SHORTHAND
+; ==================
 (define primary (lambda (args) (car args)))
 (define secondary (lambda (args) (cadr args)))
 (define ternary (lambda (args) (caddr args)))
+
 (define operator (lambda (node) (car node)))
 (define argList (lambda (node) (cdr node)))
+
 (define TRUE 'true)
 (define FALSE 'false)
 
+
+; ================
+; HELPER FUNCTIONS
+; ================
+
+; Is element a member of lis? Returns #t or #f
 (define memberOf?
   (lambda (element lis)
     (if (eq? (indexof element lis) -1) #f #t)
@@ -70,19 +80,3 @@
          )
     )
   )
-
-;(define getValues
- ; (lambda (lis state return)
-  ;  (cond
-   ;   ((null? lis) lis) 
-    ;  ((list? (car lis) (getValues (cdr lis) state (lambda (list) (return (cons list (lineParser (car lis) state)))))))
-     ; ((or (bool? (car lis)) (number? (car lis))) (getValues (cdr lis) state (lambda (list) (return (cons list (car lis))))))
-      ;(getValues (cdr lis) state (lambda (list) (return (cons list (lookupBinding (car lis) state))))))))
-
-;(define condition
- ; (lambda (lis state)
-  ;  (lineParser (car lis) state)))
-
-;(define body
- ; (lambda (lis state)
-  ;  (lineParser (cadr lis) state)))

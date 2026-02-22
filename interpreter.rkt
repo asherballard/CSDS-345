@@ -10,15 +10,28 @@
 ; Returns the updated state, or a value if return is called
 (define processStatement
   (lambda (node state)
+    (define args (argList node))
+    (define op (operator node))
    (cond
-     ; If the node is a declaration, parse with either no value or an assignment
-     [(evolver? (operator node)) (if (null? (cdr (argList node))) (declare (primary (argList node)) state) (assign (primary (argList node)) (evaluateExpression (secondary (argList node)) state) state))]
+     ; If the node is a declaration, check if re-declaered (error), then parse with either no value or an assignment
+     [(eq? op 'var) (if (isDeclared? (primary args) state)
+                        (error "Error: variables cannot be re-declared")
+                        (if (null? (cdr args))
+                            (declare (primary args) state)
+                            (assign (primary args) (evaluateExpression (secondary args) state) state))
+                        )]
+     
+     ; If the node is an assignment, first check that the variable exists
+     [(eq? op '=) (if (isDeclared? (primary args) state)
+                      (assign (primary args) (evaluateExpression (secondary args) state) state)
+                      (error "Error: attempted to assign to undeclared variable")
+                      )]
      
      ; If we're returning, do that
-     [(eq? (operator node) 'return) (evaluateExpression (primary (argList node)) state)]
+     [(eq? op 'return) (evaluateExpression (primary (argList node)) state)]
      
      ; If statement?
-     [(eq? (operator node) 'if) (processIf (argList node) state)]
+     [(eq? op 'if) (processIf (argList node) state)]
 
      ; Must be a while statement
      [else (processWhile (argList node) state)]
@@ -29,8 +42,13 @@
 
 (define processIf
   (lambda (args state)
-    (if (eq? (evaluateCondition (primary args) state) TRUE) (processStatement (secondary args) state)
-        (if (null? (cddr args)) state (processStatement (ternary args) state)))
+    (if (eq? (evaluateCondition (primary args) state) TRUE)
+        (processStatement (secondary args) state)
+        (if (null? (cddr args))
+            state
+            (processStatement (ternary args) state)
+            )
+        )
   )
 )
 
@@ -51,7 +69,10 @@
   (lambda (statementList state)
     (define currentStatement (car statementList))
     (define result (processStatement currentStatement state))
-    (if (list? result) (stateProgress (cdr statementList) result) result)
+    (if (list? result)
+        (stateProgress (cdr statementList) result)
+        result
+        )
   )
 )
 

@@ -209,29 +209,3 @@
       (not* (greater? args))
       )
     )
-
-; =================
-; CONDITIONALS
-; ==================
-; These mutate the state depending upon their condition
-
-#|(define condition
-  (lambda (lis state)
-    (lineParser (car lis) state)))
-
-(define body
-  (lambda (lis state)
-    (lineParser (cadr lis) state)))
-
-
-(define if*
-  (lambda (args state)
-    (if (evaluateCond (primary args)) (runStatement)
-      
-
-(define while
-  (lambda (lis state return)
-    (cond
-      ((condition lis state) (while lis state (lambda (loop) (lineParser (body lis) echo))))
-      state)))
-|#

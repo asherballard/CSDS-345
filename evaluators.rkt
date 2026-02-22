@@ -13,7 +13,9 @@
      (cond
        ; Is the expression a simple one? I.e. a number, boolean literal, or variable name
        [(number? node) node]
-       [(symbol? node) (if (or (eq? node TRUE) (eq? node FALSE)) node (lookupBinding node state))]
+       [(symbol? node) (if (or (eq? node TRUE) (eq? node FALSE))
+                           node
+                           (lookupBinding node state))]
 
        ; Ok, the expression is nested. Determine if it's numerical or conditional, and evaluate it as such.
        [(numerical? (operator node)) (evaluateNum node state)]
