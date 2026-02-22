@@ -2,8 +2,10 @@
 (provide (all-defined-out))
 
 (define equal
-  (lambda (x y)
-    (equal? x y)))
+  (lambda (lis return)
+    (cond
+      ((null? lis) #t)
+      (equal (cdr lis) (lambda (equals) (return 
 
 (define notequal
   (lambda (x y)
