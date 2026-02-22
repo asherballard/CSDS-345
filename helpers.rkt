@@ -38,3 +38,10 @@
     )
   )
 
+(define getInts
+  (lambda (lis state return)
+    (cond
+      ((null? lis) lis) 
+      ((list? (car lis) (getInts (cdr lis) state (lambda (list) (return (cons list (lineParser (car lis) state)))))))
+      ((number? (car lis)) (getInts (cdr lis) state (lambda (list) (return (cons list (car lis))))))
+      (getInts (cdr lis) state (lambda (list) (return (cons list (lookupBinding (car lis) state))))))))
