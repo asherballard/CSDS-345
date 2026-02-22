@@ -1,6 +1,11 @@
 #lang racket
 (require "helpers.rkt")
 (require "state.rkt")
+(require "comparisonOperators.rkt")
+(require "booleanOperators.rkt")
+(require "interpreterOperators.rkt")
+(require "conditionalOperators.rkt")
+(require "mathematicalOperators.rkt")
 
 (define operator (lambda leaf (car leaf)))
 (define argList (lambda leaf (cdr leaf)))

@@ -1,0 +1,6 @@
+(require "comparisonOperators.rkt")
+(require "booleanoperators.rkt")
+(require "intepreterOperators.rkt")
+(require "conditionalOperators.rkt")
+(require "mathematicalOperators.rkt")
+(provide (all-from-out "comparisonOperators.rkt" "booleanoperators.rkt" "intepreterOperators.rkt" "conditionalOperators.rkt" "mathematicalOperators.rkt"))
