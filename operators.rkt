@@ -83,16 +83,6 @@
       [(eq? '|| op) or*]
       [(eq? '! op) not*]
 
-      ; These mutate bindings
-      [(eq? 'var op) bindVariable]
-      [(eq? '= op) bindVariable]
-
-      ; These take conditions
-      ;[(eq? 'if op) if*]
-      ;[(eq? 'while op) while]
-
-      ; Returns an  (condition or integer value)
-      ;[(eq? 'return op) return]
       [else (error "Invalid operator")]
       )
     )
@@ -118,7 +108,10 @@
 
 (define subtraction
   (lambda (args)
-    (- (primary args) (secondary args))
+    (if (null? (cdr args))
+        (- (primary args) (* 2 (primary args)))
+        (- (primary args) (secondary args))
+        )
     )
   )
 
