@@ -1,38 +1,34 @@
 #lang racket
 (provide (all-defined-out))
+(require "helpers.rkt")
 
 (define addition
-  (lambda (lis return)
-    (cond
-      ((null? lis) 0)
-      ((null? (cdr lis)) (car lis))
-      (addition (cdr lis) (lambda (sum) (return (+ sum (+ (car lis) (cdr lis)))))))))
+  (lambda (args)
+    (+ (arg1 args) (arg2 args))
+    )
+  )
 
 (define subtraction
-  (lambda (lis x return)
-    (cond
-      ((null? lis) 0)
-      ((and (null? (cdr lis)) (eq? x 1)) (* -1 (car lis)))
-      ((null? (cdr lis)) (car lis))
-      (subtraction (cdr lis) 0 (lambda (difference) (return (- difference (car lis))))))))
+  (lambda (args)
+    (- (arg1 args) (arg2 args))
+    )
+  )
 
 (define multiplication
-  (lambda (lis return)
-    (cond
-      ((null? lis) 0)
-      ((null? (cdr lis)) (car lis))
-      (multiplication (cdr lis) (lambda (product) (return (* product (* (car lis) (cdr lis)))))))))
+  (lambda (args)
+    (* (arg1 args) (arg2 args))
+    )
+  )
+    
 
 (define division
-  (lambda (lis return)
-    (cond
-      ((null? lis) 0)
-      ((null? (cdr lis)) (car lis))
-      (division (cdr lis) (lambda (quotient) (return (/ quotient (car lis))))))))
+  (lambda (args)
+    (quotient (arg1 args) (arg2 args))
+    )
+  )
 
 (define modulo*
-  (lambda (lis return)
-    (cond
-      ((null? lis) 0)
-      ((null? (cdr lis)) (car lis))
-      (modulo* (cdr lis) (lambda (remainder) (return (modulo remainder (modulo (car lis) (cdr lis)))))))))
+  (lambda (args)
+    (modulo (arg1 args) (arg2 args))
+    )
+  )

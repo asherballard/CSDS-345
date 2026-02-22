@@ -1,18 +1,23 @@
 #lang racket
 (provide (all-defined-out))
+(require "helpers.rkt")
 
+; All functions take in 'true and 'false, and return as such
+; That is, these are boolean maps
 (define and*
-  (lambda (lis return)
-    (cond
-      ((null? lis) #t)
-      (and* (cdr lis) (lambda (v) (and v (car lis)))))))
+  (lambda (args)
+    (if (and (eq? (arg1 args) 'true) (eq? (arg2 args) 'true)) 'true 'false)
+    )
+  )
 
 (define or*
-  (lambda (lis return)
-    (cond
-      ((null? lis) #f)
-      (or* (cdr lis) (lambda (v) (or v (car lis)))))))
+  (lambda (args)
+    (if (or (eq? (arg1 args) 'true) (eq? (arg2 args) 'true)) 'true 'false)
+    )
+  )
 
-(define not
+(define not*
   (lambda (x)
-    (not x)))
+    (if (eq? 'true x) 'false 'true)
+    )
+  )

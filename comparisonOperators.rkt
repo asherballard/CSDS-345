@@ -1,4 +1,6 @@
 #lang racket
+(require "helpers.rkt")
+(provide (all-defined-out))
 
 (define equal
   (lambda (lis return)
@@ -13,6 +15,7 @@
       ((null? (cdr lis)) #t)
       ((eq? (car lis) (cdr lis))) (return #f)
       (notequal (cdr lis) echo)))
+  )
 
   (define greater
     (lambda (lis return)
@@ -29,17 +32,17 @@
         ((not (< (car lis) (cdr lis))) (return #f))
         (lesser (cdr lis) echo))))
 
-  (define greaterorequal
+  (define greaterOrEqual
     (lambda (lis return)
       (cond
         ((null? (cdr lis)) #t)
         ((< (car lis) (cdr lis)) (return #f))
-        (greaterorequal (cdr lis) echo))))
+        (greaterOrEqual (cdr lis) echo))))
 
 
-  (define lessorequal
+  (define lesserOrEqual
     (lambda (lis return)
       (cond
         ((null? (cdr lis)) #t)
         ((> (car lis) (cdr lis)) (return #f))
-        (lessorequal (cdr lis) echo))))
+        (lesserOrEqual (cdr lis) echo))))

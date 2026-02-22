@@ -11,20 +11,19 @@
 ; addBinding, but name shows you're supposed to use it as a value
 (define stateWith
   (lambda (name value state)
-    (define combine (lambda (frontList backList) (cons frontList (cons backList null))))
     (define newNames (cons name (getNameList state)))
     (define newValues (cons value (getValueList state)))
     
-    (combine newNames newValues)
+    (makePairedList newNames newValues)
     )
   )
 
-; lookupBinding, returns a list of name and value; the name is null if the name isn't found
+; lookupBinding, returns the elements value if found, errors otherwise
 (define lookupBinding
   (lambda (name state)
     (define index (indexof name (getNameList state)))
     (if (eq? -1 index) (error "Error: Attempted to use undefined variable")
-        (makePairedList name (getElement index (getValueList state) echo))
+        (getElement index (getValueList state) echo)
         )
     )
   )
@@ -39,8 +38,26 @@
     )
   )
 
+
+; Assigns value to name in the current state, and returns the mutated state
 (define assign
-  (lambda (name value)
-    (stateWith(name value (stateWithout name)))
+  (lambda (name value state)
+    (stateWith name value (stateWithout name state))
+    )
+)
+
+; Binds name to null, returns updated state
+(define declare
+  (lambda (name state)
+    (stateWith name null state)
+    )
+  )
+
+; Handles variable declaration, either with null or value
+(define bindVariable
+  (lambda (args state)
+    (if (null? (cdr args))
+        (declare (primary (args)) state)
+        (assign (primary (args)) (secondary (args)) state))
     )
   )
