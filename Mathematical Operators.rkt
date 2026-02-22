@@ -23,13 +23,12 @@
       ((null? (cdr lis)) (car lis))
       (multiplication (cdr lis) (lambda (product) (return (* product (* (car lis) (cdr lis)))))))))
 
-;needs to be fixed
 (define division
   (lambda (lis return)
     (cond
       ((null? lis) 0)
       ((null? (cdr lis)) (car lis))
-      (division (cdr lis) (lambda (quotient) (return (/ (/ (car lis) (cdr lis)))))))))
+      (division (cdr lis) (lambda (quotient) (return (/ quotient (car lis))))))))
 
 (define modulo*
   (lambda (lis return)
