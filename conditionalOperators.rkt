@@ -1,5 +1,6 @@
 #lang racket
 (provide (all-defined-out))
+(require "LineParser.rkt")
 
 ;conditionals
 

@@ -7,7 +7,7 @@
       ((null? lis) #t)
       (equal (cdr lis) (lambda (equals) (return 
 
-(define notequal
+(define notEqual
   (lambda (x y)
     (not (equal? x y))))
 
@@ -19,10 +19,10 @@
   (lambda (x y)
     (< x y)))
 
-(define greaterorequal
+(define greaterOrEqual
   (lambda (x y)
     (not (lesser x y))))
 
-(define lessorequal
+(define lesserOrEqual
   (lambda (x y)
     (not (greater x y))))

@@ -3,8 +3,7 @@
 (require "state.rkt")
 (require "comparisonOperators.rkt")
 (require "booleanOperators.rkt")
-(require "interpreterOperators.rkt")
-(require "conditionalOperators.rkt")
+;(require "conditionalOperators.rkt")
 (require "mathematicalOperators.rkt")
 
 (define operator (lambda leaf (car leaf)))
@@ -44,7 +43,7 @@
       ((eq? '% op) modulo*)
 
       ; Return bools
-      [(eq? '==' op) equals]
+      [(eq? '==' op) equal]
       [(eq? '!=' op) notequal]
       [(eq? '>' op) greater]
       [(eq? '<' op) lesser]
@@ -66,23 +65,10 @@
     )
   )
 
-; Takes a leaf and a state
+; Takes a condition and a state
 ; Returns a boolean
-(define evaluateBool
-  (lambda (leaf state)
-    (cond
-      ((eq? '== (operator parseTree)) (equals (car parseTree)))
-      ((eq? '!= (operator parseTree)) (notequal (car parseTree)))
-      ((eq? '< (operator parseTree)) (greater (car parseTree)))
-      ((eq? '> (operator parseTree)) (lesser (car parseTree)))
-      ((eq? '<= (operator parseTree)) (lessorequal (car parseTree)))
-      ((eq? '>= (operator parseTree)) (greaterorequal (car parseTree)))
-      ((eq? '&& (operator parseTree)) (and (car parseTree)))
-      ((eq? '|| (operator parseTree)) (or (car parseTree)))
-      ((eq? '! (operator parseTree)) (not (car parseTree)))
-      )
-    )
-  )
+;(define evaluateBool)
+  
 
 ; Takes a leaf and a state, and returns a new state
 (define evaluateState
