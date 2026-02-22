@@ -23,7 +23,7 @@
 (define lookupBinding
   (lambda (name state)
     (define index (indexof name (getNameList state)))
-    (if (eq? -1 index) voidState
+    (if (eq? -1 index) (error "Error: Attempted to use undefined variable")
         (makePairedList name (getElement index (getValueList state) echo))
         )
     )
