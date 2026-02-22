@@ -1,4 +1,5 @@
 #lang racket
+(require "LineParser.rkt")
 (provide (all-defined-out))
 (define indexof
   (lambda (x lis)
@@ -19,6 +20,16 @@
 )
 
 (define echo (lambda (v) v))
+
+; Applys a function f to each element in a list
+; Then returns the list
+(define applyToEach
+    (lambda (f lis)
+        (if (null? lis) null
+        (cons (f (car lis)) (applyToEach f (cdr lis)))
+        )
+      )
+  )
 
 (define getElement
   (lambda (i lis return)

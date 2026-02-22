@@ -29,12 +29,18 @@
     )
   )
 
-; stateWithout
+; stateWithout, returns the state without the given variable
 (define stateWithout
   (lambda (name state)
     (define index (indexof name (getNameList state)))
     (if (eq? -1 index) state
         (makePairedList (cutSplice index (getNameList state) echo) (cutSplice index (getValueList state) echo))
         )
+    )
+  )
+
+(define assign
+  (lambda (name value)
+    (stateWith(name value (stateWithout name)))
     )
   )
