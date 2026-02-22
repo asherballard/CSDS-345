@@ -1,46 +1,12 @@
 #lang racket
-(define indexof
-  (lambda (x lis)
-   (define indexof-break
-     (lambda (x lis break)
-       (cond
-         [(null? lis) (break -1)]
-         [(eq? x (car lis)) 0]
-         [else (+ 1 (indexof-break x (cdr lis) break))]
-         )
-       )
-  )
-   (call/cc (lambda (break)
-       (indexof-break x lis break)
-     )
-    )
-  )
-)
-
-(define echo (lambda (v) v))
-
-(define getElement
-  (lambda (i lis return)
-    (if (zero? i) (return (car lis))
-    (getElement (+ i -1) (cdr lis) echo)
-    )
-    )
-  )
+(require "helpers.rkt")
+(provide (all-defined-out))
 
 (define getNameList (lambda (state) (car state)))
 (define getValueList (lambda (state) (cadr state)))
 (define getName (lambda (binding) (car binding)))
 (define getValue (lambda (binding) (cadr binding)))
-
-(define makePairedList (lambda (first second) (cons first (cons second null))))
-
-(define cutSplice
-  (lambda (index lis return)
-    (if (zero? index) (return (cdr lis))
-         (cutSplice (+ index -1) (cdr lis) (lambda (donelis) (return (cons (car lis) donelis))))
-         )
-    )
-  )
+(define voidState (makePairedList null null))
 
 ; addBinding, but name shows you're supposed to use it as a value
 (define stateWith
@@ -57,7 +23,7 @@
 (define lookupBinding
   (lambda (name state)
     (define index (indexof name (getNameList state)))
-    (if (eq? -1 index) (cons null null)
+    (if (eq? -1 index) voidState
         (makePairedList name (getElement index (getValueList state) echo))
         )
     )
