@@ -13,7 +13,7 @@
     (define args (argList node))
     (define op (operator node))
    (cond
-     ; If the node is a declaration, check if re-declaered (error), then parse with either no value or an assignment
+     ; If the node is a declaration, check if its a redeclaration (error), then parse with either no value or an assignment as appropriate
      [(eq? op 'var) (if (isDeclared? (primary args) state)
                         (error "Error: variables cannot be re-declared")
                         (if (null? (cdr args))
@@ -27,35 +27,52 @@
                       (error "Error: attempted to assign to undeclared variable")
                       )]
      
-     ; If we're returning, do that
+     ; If we're returning, do that after evaluating the expression
      [(eq? op 'return) (evaluateExpression (primary (argList node)) state)]
      
-     ; If statement?
+     ; If statement? Move to relevant processor and return that
      [(eq? op 'if) (processIf (argList node) state)]
 
-     ; Must be a while statement
+     ; Must be a while statement, move to *that* processor
      [else (processWhile (argList node) state)]
      
    )
  )
 )
 
+
+; Take in the args of an if construct
+; Returns the updated state from evaluating it
 (define processIf
   (lambda (args state)
+    ; If the condition evaluates to TRUE, pass the state given by processing statement 1
     (if (eq? (evaluateCondition (primary args) state) TRUE)
         (processStatement (secondary args) state)
+        
+        ; Otherwise, the condition fails, so we check if there's an "else" statement, and pass that state if so
         (if (null? (cddr args))
+            ; If no else, do nothing
             state
+            ; If else, return the state from that
             (processStatement (ternary args) state)
             )
         )
   )
 )
 
+
+; Takes in the args of a while construct
+; Returns the final state when the loop break via accumulator recursion
+; (Intermediate recursive steps return the state after one processing of the body statement)
 (define processWhile
   (lambda (args state)
+    ; Is the while condition true?
     (if (eq? (evaluateCondition (primary args) state) TRUE)
+        
+        ; If so, mutate the state and recurse
         (processWhile args (processStatement (secondary args) state))
+        
+        ; Otherwise, return the current state
         state
     )
   )
@@ -67,16 +84,24 @@
 ; I.e. THIS SHOULD ONLY RETURN VALUES!!!
 (define stateProgress
   (lambda (statementList state)
+    ; Make some definitions for readability
     (define currentStatement (car statementList))
     (define result (processStatement currentStatement state))
+
+    ; Is the result a list (i.e. a state)?
     (if (list? result)
+        ; If it is, we didn't return, so accumulate the state and move forward
         (stateProgress (cdr statementList) result)
+        
+        ; If it isn't, we returned! Give out the value (this is the base case.)
         result
         )
   )
 )
 
 ; The main interpret function
+; Literally just starts the stateProgress lawnmower with an initial state and statementList
+; Takes the filename as input, and gives the return value as outputd
 (define interpret
   (lambda (filename)
     (stateProgress (parser filename) voidState)

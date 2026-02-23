@@ -11,14 +11,26 @@
 (define evaluateExpression
   (lambda (node state)
      (cond
+       ; ==========
        ; Is the expression a simple one? I.e. a number, boolean literal, or variable name
+
+       ; If the node is a number, simple return
        [(number? node) node]
-       [(symbol? node) (if (or (eq? node TRUE) (eq? node FALSE))
+
+       ; If the node is a symbol, check if it's a boolean literal. If so, return the literal
+       [(symbol? node) (if (or
+                            (eq? node TRUE)
+                            (eq? node FALSE))
                            node
+                           
+                           ; If it isn't a boolean literal, it must be a variable
+                           ; Return the variable's binding
                            (lookupBinding node state))]
 
-       ; Ok, the expression is nested. Determine if it's numerical or conditional, and evaluate it as such.
-       [(numerical? (operator node)) (evaluateNum node state)]
+       ; Ok, the expression is nested (not a literal or variable). Determine if it's numerical or conditional, and evaluate it as such.
+       [(numerical? (operator node))(evaluateNum node state)]
+
+       ; Must be a condition
       [else (evaluateCondition node state)]
       )
     )
@@ -29,39 +41,45 @@
 (define evaluateCondition
   (lambda (node state)
     (cond
-      ; Is it a literal value?
+      ; Is it a literal value? Then return it
       [(or (eq? node TRUE) (eq? node FALSE)) node]
-      ; Is it a variable name?
+      
+      ; Is it a variable name? Return it's binding
       [(symbol? node) (lookupBinding node state)]
+      
       ; It must be an operation
       [else (cond
-             ; If magnitude-based, evaluate each arg as an integer
+              
+             ; If magnitude-based, evaluate each arg as an integer, and return its value
              [(magnitudeBased? (operator node))
-                  ((convertOperator (operator node)) (applyToEach (lambda (x) (evaluateNum x state)) (cdr node)))]
+                  ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateNum x state)) (cdr node) echo))]
                   
-             ; If boolean-based, evaluate each arg as such
+             ; If boolean-based, evaluate each arg as such, and return its value
              [(booleanBased? (operator node))
-                  ((convertOperator (operator node)) (applyToEach (lambda (x) (evaluateCondition x state)) (cdr node)))]
+                  ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateCondition x state)) (cdr node) echo))]
                   
-             ; If we reach this point, it must be a comparison operator (== or !=). Thus we call the generic expression evaluator.
-             [else ((convertOperator (operator node)) (applyToEach (lambda (x) (evaluateExpression x state)) (cdr node)))]
+             ; If we reach this point, it must be a comparison operator (== or !=).
+             ; Thus we call the generic expression evaluator, since these operators can be either numerical or a condition
+             [else ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateExpression x state)) (cdr node) echo))]
              )
        ]
       )
  )
 )
 
-; Takes an integer value (can be an expression or variable name) and a state
+; Takes an integer value (can be an expression or a variable name) and a state
 ; Returns an integer
 (define evaluateNum
   (lambda (node state)
     (cond
-      ; Is it a number?
+      ; Is it a number? Return it
       [(number? node) node]
-      ; Is it a variable name?
+      
+      ; Is it a variable name? Return its binding
       [(symbol? node) (lookupBinding node state)]
-      ; It must be an operation
-      [else ((convertOperator (operator node)) (applyToEach (lambda (x) (evaluateNum x state)) (cdr node)))]
+      
+      ; It must be an operation, apply the operation and return the value
+      [else ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateNum x state)) (cdr node) echo))]
       )
     )
   )

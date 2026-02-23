@@ -6,7 +6,7 @@
 ; SYNTAX CLASSIFIERS
 ; ====================
 
-; Is this operator a conditional?
+#|; Is this operator a conditional?
 (define conditional?
   (lambda (operator)
     (define condList '(if while))
@@ -20,7 +20,7 @@
     (define evolverList '(var =))
     (memberOf? operator evolverList)
     )
-  )
+  )|#
 
 ; Classifies an operator as numerical or not, returns #t or #f
 (define numerical?
@@ -48,18 +48,19 @@
     )
   )
 
-; Returns if an operator outputs a boolean
+#|; Returns if an operator outputs a boolean
 (define boolOut?
   (lambda (operator)
     (or (magnitudeBased? operator) (booleanBased? operator))
     )
-  )
+  )|#
 
 ; =====================
 ; PARSER INTERPRETATION
 ; =====================
 
 ; Takes a symbol and returns the matching procedure
+; This is to condense notation for expression evaluation
 (define convertOperator
   (lambda (op)
     (cond
@@ -92,7 +93,7 @@
 ; STATE OPERATORS
 ; =================
 ; These functions map state to state
-(require "state.rkt")
+;(require "state.rkt")
 
 ; ======================
 ; INTEGER OPERATORS
@@ -106,10 +107,15 @@
     )
   )
 
+; Here we handle the slightly more complicated case of "is it a unary negative?"
 (define subtraction
   (lambda (args)
+    ; Is it a unary call?
     (if (null? (cdr args))
+        ; If so, for input x we return x - 2x = -x
         (- (primary args) (* 2 (primary args)))
+        
+        ;Otherwise, do normal subtraction
         (- (primary args) (secondary args))
         )
     )
@@ -124,6 +130,7 @@
 
 (define division
   (lambda (args)
+    ; Use quotient so that "/" returns integer values only (drops any fractional part)
     (quotient (primary args) (secondary args))
     )
   )
@@ -137,24 +144,37 @@
 ; =================
 ; BOOLEAN OPERATORS
 ; =================
-; All functions take in TRUE and FALSE, and return as such
+; All functions take in TRUE and FALSE (abstractions defined in helpers.rkt), and return as such
 ; That is, these are boolean maps
 
 (define and*
   (lambda (args)
-    (if (and (eq? (primary args) TRUE) (eq? (secondary args) TRUE)) TRUE FALSE)
+    (if (and
+         (eq? (primary args) TRUE)
+         (eq? (secondary args) TRUE))
+        TRUE
+        FALSE
+        )
     )
   )
 
 (define or*
   (lambda (args)
-    (if (or (eq? (primary args) TRUE) (eq? (secondary args) TRUE)) TRUE FALSE)
+    (if (or
+         (eq? (primary args) TRUE)
+         (eq? (secondary args) TRUE))
+        TRUE
+        FALSE
+        )
     )
   )
 
 (define not*
   (lambda (x)
-    (if (eq? TRUE x) FALSE TRUE)
+    (if (eq? TRUE x)
+        FALSE
+        TRUE
+        )
     )
   )
 
@@ -164,7 +184,7 @@
 ; ===============
 ; These functions take in EITHER
 ; - two numbers
-; - two bools (TRUE or FALSE as above)
+; - two bools (TRUE or FALSE as in helpers.rkt)
 ; And produce a bool accoridngly
 
 (define equal?
@@ -182,18 +202,23 @@
 ; =================
 ; MAGNITUDE MAPS
 ; =================
-; These functions take in integer values and produce a literal boolean (TRUE or FALSE, as defined above)
-; That is, these are M_boolean
+; These functions take in integer values and produce a literal boolean (TRUE or FALSE, as defined in helpers.rkt)
 
 (define greater?
   (lambda (args)
-      (if (> (primary args) (secondary args)) TRUE FALSE)
+      (if (> (primary args) (secondary args))
+          TRUE
+          FALSE
+          )
     )
   )
 
 (define lesser?
     (lambda (args)
-      (if (< (primary args) (secondary args)) TRUE FALSE)
+      (if (< (primary args) (secondary args))
+          TRUE
+          FALSE
+          )
       )
   )
 
