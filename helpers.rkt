@@ -1,8 +1,8 @@
 #lang racket
 (provide (all-defined-out))
 
-; =================
-; SYNTAX SHORTHAND
+; ==================
+; SYNTAX ABSTRACTION
 ; ==================
 (define primary (lambda (args) (car args)))
 (define secondary (lambda (args) (cadr args)))
@@ -49,21 +49,24 @@
 ; For readability of cps functions
 (define echo (lambda (v) v))
 
+
 ; Applys a function f to each element in a list
 ; Then returns the list
-(define applyToEach
-    (lambda (f lis)
-        (if (null? lis) null
-        (cons (f (car lis)) (applyToEach f (cdr lis)))
-        )
+(define applyToEach-cps
+    (lambda (f lis return)
+      (if (null?  lis)
+          (return null)
+          (applyToEach-cps f (cdr lis) (lambda (donelis) (return (cons (f (car lis)) donelis))))
+          )
       )
   )
 
 ; Returns the element in lis at index i (zero-indexed)
 (define getElement
   (lambda (i lis return)
-    (if (zero? i) (return (car lis))
-    (getElement (+ i -1) (cdr lis) echo)
+    (if (zero? i)
+        (return (car lis))
+        (getElement (+ i -1) (cdr lis) echo)
     )
     )
   )
@@ -73,10 +76,12 @@
 
 
 ; Removes the value at index in a list
+; Then returns the list without that value
 (define cutSplice
   (lambda (index lis return)
-    (if (zero? index) (return (cdr lis))
-         (cutSplice (+ index -1) (cdr lis) (lambda (donelis) (return (cons (car lis) donelis))))
+    (if (zero? index)
+        (return (cdr lis))
+        (cutSplice (+ index -1) (cdr lis) (lambda (donelis) (return (cons (car lis) donelis))))
          )
     )
   )
