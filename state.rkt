@@ -3,15 +3,26 @@
 (provide (all-defined-out))
 
 ; Abstract the list of names and values
-(define getNameList (lambda (state) (car state)))
-(define getValueList (lambda (state) (cadr state)))
+; For applying to the state
+(define getNameList car)
+(define getValueList cadr)
+
+; Abstract what represents "no value" (declaration without assignment)
+(define EMPTY null)
+(define isEMPTY? (lambda (val) (eq? val EMPTY)))
 
 ; Abstract the retrieval of either part of a binding
-(define getName (lambda (binding) (car binding)))
-(define getValue (lambda (binding) (cadr binding)))
+; For applying to a binding
+(define getName car)
+(define getValue cadr)
+
+; Abstract the structure of the state
+(define addName (lambda (name state) (cons name (getNameList state))))
+(define addValue (lambda (value state) (cons value (getValueList state))))
+(define state? list?)
 
 ; Shortcut to a "nothing declared" state
-(define voidState (makePairedList null null))
+(define voidState (makePairedList EMPTY EMPTY))
 
 
 ; Abstracts state structure away from interpreter
@@ -30,8 +41,8 @@
 ; Adds the binding (name, value) to state
 (define stateWith
   (lambda (name value state)
-    (define newNames (cons name (getNameList state)))
-    (define newValues (cons value (getValueList state)))
+    (define newNames (addName name state))
+    (define newValues (addValue value state))
 
     ; Check to make sure the name isn't taken already (should be redundant, but SOMEONE always finds a way)
     (if (isDeclared? name state)
@@ -54,7 +65,7 @@
         ; (with wacky notation to avoid calling getElement twice)
         ; Essentially this defines a lambda first, THEN returns that lambda applied to the binding's value.\
         ; This is so we can store the value and not call getElement more than necessary.
-        ((lambda (value) (if (null? value)
+        ((lambda (value) (if (isEMPTY? value)
             (error "Error: attempted to access undefined variable")
             value
             )) (getElement index (getValueList state) echo))
@@ -86,12 +97,12 @@
     )
 )
 
-; Binds name to null, returns updated state
+; Binds name to EMPTY, returns updated state
 (define declare
   (lambda (name state)
     (if (memberOf? name (getNameList state))
         (error "Variable re-declared")
-        (stateWith name null state)
+        (stateWith name EMPTY state)
         )
     )
   )

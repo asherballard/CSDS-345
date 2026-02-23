@@ -16,10 +16,11 @@
      ; If the node is a declaration, check if its a redeclaration (error), then parse with either no value or an assignment as appropriate
      [(eq? op 'var) (if (isDeclared? (primary args) state)
                         (error "Error: variables cannot be re-declared")
-                        (if (null? (cdr args))
+                        (if (secondary? args)
+                            (assign (primary args) (evaluateExpression (secondary args) state) state)
                             (declare (primary args) state)
-                            (assign (primary args) (evaluateExpression (secondary args) state) state))
-                        )]
+                        )
+                     )]
      
      ; If the node is an assignment, first check that the variable exists
      [(eq? op '=) (if (isDeclared? (primary args) state)
@@ -50,11 +51,12 @@
         (processStatement (secondary args) state)
         
         ; Otherwise, the condition fails, so we check if there's an "else" statement, and pass that state if so
-        (if (null? (cddr args))
-            ; If no else, do nothing
-            state
+        (if (ternary? args)
             ; If else, return the state from that
             (processStatement (ternary args) state)
+
+            ; If no else, do nothing
+            state
             )
         )
   )
@@ -84,14 +86,13 @@
 ; I.e. THIS SHOULD ONLY RETURN VALUES!!!
 (define stateProgress
   (lambda (statementList state)
-    ; Make some definitions for readability
-    (define currentStatement (car statementList))
-    (define result (processStatement currentStatement state))
+    ; Definition for readability
+    (define result (processStatement (currentStatement statementList) state))
 
-    ; Is the result a list (i.e. a state)?
-    (if (list? result)
+    ; Is the result a state?
+    (if (state? result)
         ; If it is, we didn't return, so accumulate the state and move forward
-        (stateProgress (cdr statementList) result)
+        (stateProgress (remainingStatements statementList) result)
         
         ; If it isn't, we returned! Give out the value (this is the base case.)
         result

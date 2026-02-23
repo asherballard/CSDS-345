@@ -1,0 +1,7 @@
+var a = 5;
+var b = a*a;
+var c = b*b;
+if (a == 5)
+  if (b == 25)
+    if (c == b * b)
+      return true;

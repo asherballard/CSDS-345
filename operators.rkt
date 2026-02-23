@@ -6,22 +6,6 @@
 ; SYNTAX CLASSIFIERS
 ; ====================
 
-#|; Is this operator a conditional?
-(define conditional?
-  (lambda (operator)
-    (define condList '(if while))
-    (memberOf? operator condList)
-    )
-  )
-
-; Classifies an operator as state-affecting or not, returns #t or #f
-(define evolver?
-  (lambda (operator)
-    (define evolverList '(var =))
-    (memberOf? operator evolverList)
-    )
-  )|#
-
 ; Classifies an operator as numerical or not, returns #t or #f
 (define numerical?
   (lambda (operator)
@@ -47,13 +31,6 @@
     (memberOf? operator booleanList)
     )
   )
-
-#|; Returns if an operator outputs a boolean
-(define boolOut?
-  (lambda (operator)
-    (or (magnitudeBased? operator) (booleanBased? operator))
-    )
-  )|#
 
 ; =====================
 ; PARSER INTERPRETATION
@@ -88,12 +65,6 @@
       )
     )
   )
-
-; =================
-; STATE OPERATORS
-; =================
-; These functions map state to state
-;(require "state.rkt")
 
 ; ======================
 ; INTEGER OPERATORS

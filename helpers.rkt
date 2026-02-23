@@ -4,16 +4,48 @@
 ; ==================
 ; SYNTAX ABSTRACTION
 ; ==================
-(define primary (lambda (args) (car args)))
-(define secondary (lambda (args) (cadr args)))
-(define ternary (lambda (args) (caddr args)))
 
-(define operator (lambda (node) (car node)))
-(define argList (lambda (node) (cdr node)))
+; Abstract getting each argument from an argList
+; For applying to an argList
+(define primary car)
+(define secondary cadr)
+(define ternary caddr)
 
+; Abstract getting the operator and arguments from a node
+; For applying to nodes
+(define operator car)
+(define argList cdr)
+
+; Abstract boolean values
 (define TRUE 'true)
 (define FALSE 'false)
 
+; Statement syntax abstraction
+; For applying to statementList
+(define remainingStatements cdr)
+(define currentStatement car)
+
+
+; Does argList have a next arg?
+(define secondary?
+  (lambda (args)
+    (not (null? (cdr args)))
+    )
+  )
+
+; Does argList have a next-next arg? (I.e. a third argument)
+(define ternary?
+  (lambda (args)
+    (not (null? (cddr args)))
+    )
+  )
+
+; Is atom a boolean literal? (I.e. TRUE or FALSE)
+(define isBool?
+  (lambda (atom)
+    (or (eq? atom TRUE) (eq? atom FALSE))
+    )
+  )
 
 ; ================
 ; HELPER FUNCTIONS

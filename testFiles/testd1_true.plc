@@ -1,0 +1,8 @@
+var a;
+var b;
+var c;
+
+a = 10;
+b = a - 5;
+c = a + 5 - b;
+return (c == 10);

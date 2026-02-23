@@ -18,9 +18,7 @@
        [(number? node) node]
 
        ; If the node is a symbol, check if it's a boolean literal. If so, return the literal
-       [(symbol? node) (if (or
-                            (eq? node TRUE)
-                            (eq? node FALSE))
+       [(symbol? node) (if (isBool? node)
                            node
                            
                            ; If it isn't a boolean literal, it must be a variable
@@ -41,8 +39,8 @@
 (define evaluateCondition
   (lambda (node state)
     (cond
-      ; Is it a literal value? Then return it
-      [(or (eq? node TRUE) (eq? node FALSE)) node]
+      ; Is it a bool literal? Then return it
+      [(isBool? node) node]
       
       ; Is it a variable name? Return it's binding
       [(symbol? node) (lookupBinding node state)]
@@ -52,15 +50,15 @@
               
              ; If magnitude-based, evaluate each arg as an integer, and return its value
              [(magnitudeBased? (operator node))
-                  ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateNum x state)) (cdr node) echo))]
+                  ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateNum x state)) (argList node) echo))]
                   
              ; If boolean-based, evaluate each arg as such, and return its value
              [(booleanBased? (operator node))
-                  ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateCondition x state)) (cdr node) echo))]
+                  ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateCondition x state)) (argList node) echo))]
                   
              ; If we reach this point, it must be a comparison operator (== or !=).
              ; Thus we call the generic expression evaluator, since these operators can be either numerical or a condition
-             [else ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateExpression x state)) (cdr node) echo))]
+             [else ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateExpression x state)) (argList node) echo))]
              )
        ]
       )
@@ -79,7 +77,7 @@
       [(symbol? node) (lookupBinding node state)]
       
       ; It must be an operation, apply the operation and return the value
-      [else ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateNum x state)) (cdr node) echo))]
+      [else ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateNum x state)) (argList node) echo))]
       )
     )
   )
