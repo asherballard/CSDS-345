@@ -34,7 +34,7 @@
   )
 
 ; =================
-; BINDING FUNCTIONS
+; BINDING (STATE) FUNCTIONS
 ; =================
 
 ; Essentially addBinding

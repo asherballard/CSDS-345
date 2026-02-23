@@ -1,5 +1,5 @@
 #lang racket
-; This contains all expression evaluation functions (i.e., M_integer and M_bool)
+; This contains all expression evaluation functions (i.e., M_value)
 (require "state.rkt")
 (require "helpers.rkt")
 (require "operators.rkt")

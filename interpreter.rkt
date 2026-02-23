@@ -6,6 +6,14 @@
 (require "simpleParser.rkt")
 (provide (all-defined-out))
 
+
+; =======================
+; STATE MAPPING FUNCTIONS
+; =======================
+; Each of these functions take in constructs and the current state
+; And return a new state
+; I.e. M_state mappings
+
 ; Takes a statement and state
 ; Returns the updated state, or a value if return is called
 (define processStatement
@@ -91,6 +99,7 @@
 
     ; Is the result a state?
     (if (state? result)
+        
         ; If it is, we didn't return, so accumulate the state and move forward
         (stateProgress (remainingStatements statementList) result)
         
@@ -99,6 +108,9 @@
         )
   )
 )
+; ==================
+; MAIN FUNCTION
+; ==================
 
 ; The main interpret function
 ; Literally just starts the stateProgress lawnmower with an initial state and statementList

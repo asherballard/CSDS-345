@@ -70,7 +70,7 @@
 ; INTEGER OPERATORS
 ; ======================
 ; All functions take in integer values, and return as such
-; Essentially, integer maps
+; Essentially, integer maps (M_value)
 
 (define addition
   (lambda (args)
@@ -116,7 +116,7 @@
 ; BOOLEAN OPERATORS
 ; =================
 ; All functions take in TRUE and FALSE (abstractions defined in helpers.rkt), and return as such
-; That is, these are boolean maps
+; That is, these are boolean maps (Still M_value)
 
 (define and*
   (lambda (args)
@@ -157,6 +157,7 @@
 ; - two numbers
 ; - two bools (TRUE or FALSE as in helpers.rkt)
 ; And produce a bool accoridngly
+; Thus M_value
 
 (define equal?
   (lambda (args)
@@ -174,6 +175,7 @@
 ; MAGNITUDE MAPS
 ; =================
 ; These functions take in integer values and produce a literal boolean (TRUE or FALSE, as defined in helpers.rkt)
+; Still M_value
 
 (define greater?
   (lambda (args)
