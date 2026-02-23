@@ -90,7 +90,7 @@
 
 ; Takes a statement list and initial state, 
 ; updates the state based on the first statement,
-; and when a return statement is reached (i.e. processStatement returns not a list), returns that value
+; and when a return statement is reached (i.e. processStatement returns a value), returns that value
 ; I.e. THIS SHOULD ONLY RETURN VALUES!!!
 (define stateProgress
   (lambda (statementList state)
@@ -103,7 +103,7 @@
         ; If it is, we didn't return, so accumulate the state and move forward
         (stateProgress (remainingStatements statementList) result)
         
-        ; If it isn't, we returned! Give out the value (this is the base case.)
+        ; If it isn't, we returned! Give out the value (this is the base case).
         result
         )
   )
