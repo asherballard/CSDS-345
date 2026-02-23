@@ -33,9 +33,9 @@
     )
   )
 
-; =================
+; =========================
 ; BINDING (STATE) FUNCTIONS
-; =================
+; =========================
 
 ; Essentially addBinding
 ; Adds the binding (name, value) to state
