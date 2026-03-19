@@ -39,46 +39,8 @@
 ; STATE MAPPING FUNCTIONS
 ; =======================
 ; Each of these functions take in constructs and the current state
-; And return a new state
+; And returns a new state
 ; I.e. M_state mappings
-
-; Take in the args of an if construct
-; Returns the updated state from evaluating it
-(define convertIfStatement
-  (lambda (args state)
-    ; If the condition evaluates to TRUE, pass the state mapping given by processing statement 1
-    (if (eq? (evaluateCondition (primary args) state) TRUE)
-        (getStateMapping (secondary args) state)
-        
-        ; Otherwise, the condition fails, so we check if there's an "else" statement, and pass that state mapping if so
-        (if (ternary? args)
-            ; If else, return the state mapping from that
-            (getStateMapping (ternary args) state)
-
-            ; If no else, do nothing
-            echo
-            )
-        )
-  )
-)
-
-
-; Takes in the args of a while construct
-; Returns the final state when the loop break via accumulator recursion
-; (Intermediate recursive steps return the state after one processing of the body statement)
-(define processWhile
-  (lambda (args state)
-    ; Is the while condition true?
-    (if (eq? (evaluateCondition (primary args) state) TRUE)
-        
-        ; If so, mutate the state and recurse
-        (lambda (inputState) (processWhile args (getStateMapping (secondary args) inputState)))
-        
-        ; Otherwise, echo the current state
-        echo
-    )
-  )
-)
 
 ; Takes a statementList, line of code to be executed, and other continuations
 ; Continues until it hits a return
