@@ -18,14 +18,15 @@
 (define isEMPTY? (lambda (val) (eq? val EMPTY)))
 
 ; Abstract the structure of the state
-; Returns the updated LIST
+; The first 2 return updated LISTS
 ; NOTE: modified from part 1 to instead assume "list of layers" structure
 (define newNameList (lambda (name state) (cons name (getLayerNameList (peekActiveLayer state)))))
 (define newValueList (lambda (value state) (cons value (getLayerValueList (peekActiveLayer state)))))
+
 (define state? list?)
 
 ; Shortcut to a "nothing declared" state
-(define voidState (makePairedList EMPTY EMPTY))
+(define voidState (cons (makePairedList EMPTY EMPTY) null))
 
 
 ; Abstracts state structure away from interpreter
@@ -62,15 +63,15 @@
 ; Adds the binding (name, value) to state
 (define stateWith
   (lambda (name value state)
-    (define newNames (newNameList name state))
-    (define newValues (newValueList value state))
-    (define newLayer (cons newNames newValues))
+    (define updatedNames (newNameList name state))
+    (define updatedValues (newValueList value state))
+    (define updatedLayer (makePairedList updatedNames updatedValues))
 
     ; Check to make sure the name isn't taken already (should be redundant, but SOMEONE always finds a way)
-    ; Note: this allows for redeclaration WITHIN A LAYER. To prevent clashes.
+    ; Note: this allows for redeclaration of a variable if it hasn't been declared IN THE CURRENT LAYER. To prevent clashes.
     (if (isLive? name state)
         (error "Error: variable name already declared in current scope")
-        (stateWithLayer newLayer (stateHeritage state))
+        (stateWithLayer updatedLayer (stateHeritage state))
         )
     )
   )
@@ -82,10 +83,11 @@
 
     (if (eq? -1 index)
         ; If the name isn't actually declared yet IN THIS SCOPE, we do nothing
+        ; This is because stateWithout is only used during assignment, to clear any old binding IN THE SCOPE
         state
 
 
-        ; Otherwise, make a new state by splicing each list at it's index, and returning the new state
+        ; Otherwise, make a new layer by splicing each list at it's index, and returning the new state
         ; Note that cutSplice is CPS recursive, and echo is shorthand for (lambda (v) v)
         (stateWithLayer
          (makePairedList
