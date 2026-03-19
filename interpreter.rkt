@@ -6,6 +6,43 @@
 (require "simpleParser.rkt")
 (provide (all-defined-out))
 
+; ============================
+; INTERPRETER HELPER FUNCTIONS
+; ============================
+; Functions only related to the interpreter that do intermediate steps
+
+; Helper function that turns a statement into a state mapping for getting "next"
+(define getStateMapping
+  (lambda (statement state)
+    (define args (argList statement))
+    (define op (operator statement))
+    (cond
+      ; If the statement is a declaration, check if its a redeclaration, then parse as appropriate
+      [(eq? op 'var) (if (isDeclared? (primary args) state)
+                         (error "Error: variables cannot be re-declared")
+                         (if (secondary? args)
+                             (lambda (inputState) (assign (primary args) (evaluateExpression (secondary args) inputState) inputState))
+                             (lambda (inputState) (declare (primary args) inputState))
+                             )
+                         )]
+      ; If the statement is an assignment, check to make sure var is declared
+      [(eq? op '=) (if (isDeclared? (primary args) state)
+                       (lambda (inputState) (assign (primary args) (evaluateExpression (secondary args) inputState) inputState))
+                       (error "Error: attemped to assign to undeclared variable")
+                       )]
+
+      ; If statement? Pass along that function
+      [(eq? op 'if) (convertIfStatement args state)]
+
+      ; While statement? Pass that along
+      [(eq? op 'while) (processWhile args state)]
+
+      ; Probably supposed to do something with a return statement but eh
+      [(eq? op 'return) (lambda (inputState) (evaluateExpression (primary args) inputState))]
+      )
+    )
+  )
+
 
 ; =======================
 ; STATE MAPPING FUNCTIONS
@@ -14,57 +51,21 @@
 ; And return a new state
 ; I.e. M_state mappings
 
-; Takes a statement and state
-; Returns the updated state, or a value if return is called
-(define processStatement
-  (lambda (node state)
-    (define args (argList node))
-    (define op (operator node))
-   (cond
-     ; If the node is a declaration, check if its a redeclaration (error), then parse with either no value or an assignment as appropriate
-     [(eq? op 'var) (if (isDeclared? (primary args) state)
-                        (error "Error: variables cannot be re-declared")
-                        (if (secondary? args)
-                            (assign (primary args) (evaluateExpression (secondary args) state) state)
-                            (declare (primary args) state)
-                        )
-                     )]
-     
-     ; If the node is an assignment, first check that the variable exists
-     [(eq? op '=) (if (isDeclared? (primary args) state)
-                      (assign (primary args) (evaluateExpression (secondary args) state) state)
-                      (error "Error: attempted to assign to undeclared variable")
-                      )]
-     
-     ; If we're returning, do that after evaluating the expression
-     [(eq? op 'return) (evaluateExpression (primary (argList node)) state)]
-     
-     ; If statement? Move to relevant processor and return that
-     [(eq? op 'if) (processIf (argList node) state)]
-
-     ; Must be a while statement, move to *that* processor
-     [else (processWhile (argList node) state)]
-     
-   )
- )
-)
-
-
 ; Take in the args of an if construct
 ; Returns the updated state from evaluating it
-(define processIf
+(define convertIfStatement
   (lambda (args state)
-    ; If the condition evaluates to TRUE, pass the state given by processing statement 1
+    ; If the condition evaluates to TRUE, pass the state mapping given by processing statement 1
     (if (eq? (evaluateCondition (primary args) state) TRUE)
-        (processStatement (secondary args) state)
+        (getStateMapping (secondary args) state)
         
-        ; Otherwise, the condition fails, so we check if there's an "else" statement, and pass that state if so
+        ; Otherwise, the condition fails, so we check if there's an "else" statement, and pass that state mapping if so
         (if (ternary? args)
-            ; If else, return the state from that
-            (processStatement (ternary args) state)
+            ; If else, return the state mapping from that
+            (getStateMapping (ternary args) state)
 
             ; If no else, do nothing
-            state
+            echo
             )
         )
   )
@@ -80,34 +81,66 @@
     (if (eq? (evaluateCondition (primary args) state) TRUE)
         
         ; If so, mutate the state and recurse
-        (processWhile args (processStatement (secondary args) state))
+        (lambda (inputState) (processWhile args (getStateMapping (secondary args) inputState)))
         
-        ; Otherwise, return the current state
-        state
+        ; Otherwise, echo the current state
+        echo
     )
   )
 )
 
-; Takes a statement list and initial state, 
-; updates the state based on the first statement,
-; and when a return statement is reached (i.e. processStatement returns a value), returns that value
-; I.e. THIS SHOULD ONLY RETURN VALUES!!!
-(define stateProgress
-  (lambda (statementList state)
-    ; Definition for readability
-    (define result (processStatement (currentStatement statementList) state))
+; Takes a statementList, line of code to be executed, and other continuations
+; Continues until it hits a return
+(define nextState
+  (lambda (state statementList next break continue return throw)
+    
+    (define statement (if (null? statementList) null (currentStatement statementList)))
+    (define op (operator statement))
+    (define args (argList statement))
+    (define newState (next state))
+    (define tail (remainingStatements statementList))
+    
+    (cond
+      ; Check for end of block
+      [(null? statement) newState]
+      
+      ; If we're returning, do that
+      [(eq? 'return op) (return (evaluateExpression (primary (argList statement)) newState) newState)]
+      
+      ; If we're assigning or declaring, pass that into next
+      [(or (eq? 'var op) (eq? '= op)) (nextState newState tail (getStateMapping statement newState) break continue return throw)]
 
-    ; Is the result a state?
-    (if (state? result)
-        
-        ; If it is, we didn't return, so accumulate the state and move forward
-        (stateProgress (remainingStatements statementList) result)
-        
-        ; If it isn't, we returned! Give out the value (this is the base case).
-        result
-        )
+      ; If it's an if statement, evaluate the condition and apply next appropriately
+      [(eq? op 'if) (if (eq? (evaluateCondition (primary args) newState) TRUE)
+                        ; True condition means we put the first statement on the statementList
+                        (nextState newState (cons (secondary args) tail) echo break continue return throw)
+
+                        ; Check for an else condition, put it on the list if exists
+                        (if (ternary? args)
+                            (nextState newState (cons (ternary args) tail) echo break continue return throw)
+                            (nextState newState tail echo break continue return throw)
+                            )
+                        )]
+
+      ; If it's a while statement, keep reprocessing the statement until the condition is false or we break
+      [(eq? op 'while) (if (eq? (evaluateCondition (primary args) newState) TRUE)
+                           ; Put the true statement in front of while so it executes before checking again
+                           (nextState newState (cons (secondary args) statementList) echo break continue return throw)
+
+                           ; If condition is false, do nothing
+                           (nextState newState tail echo break continue return throw)
+                           )]
+      [else (error "Unrecognized operator when progressing")]
+      )
+    )
   )
-)
+
+; ===========
+; SCOPE TOOLS
+; ===========
+
+
+
 ; ==================
 ; MAIN FUNCTION
 ; ==================
@@ -117,6 +150,17 @@
 ; Takes the filename as input, and gives the return value as outputd
 (define interpret
   (lambda (filename)
-    (stateProgress (parser filename) voidState)
+    (nextState voidState (parser filename)
+               ; Next
+               echo
+               ; Break
+               echo
+               ; Continue
+               echo
+               ; Return
+               (lambda (value state) (echo value))
+               ; Throw
+               (lambda (value state) (makePairedList value state))
+               )
     )
   )
