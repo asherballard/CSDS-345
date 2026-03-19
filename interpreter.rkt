@@ -30,15 +30,6 @@
                        (lambda (inputState) (assign (primary args) (evaluateExpression (secondary args) inputState) inputState))
                        (error "Error: attemped to assign to undeclared variable")
                        )]
-
-      ; If statement? Pass along that function
-      [(eq? op 'if) (convertIfStatement args state)]
-
-      ; While statement? Pass that along
-      [(eq? op 'while) (processWhile args state)]
-
-      ; Probably supposed to do something with a return statement but eh
-      [(eq? op 'return) (lambda (inputState) (evaluateExpression (primary args) inputState))]
       )
     )
   )
