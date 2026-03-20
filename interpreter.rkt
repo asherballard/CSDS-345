@@ -18,10 +18,14 @@
     (define op (operator statement))
     (cond
       ; If the statement is a declaration, check if its a redeclaration, then parse as appropriate
-      [(eq? op 'var) (if (isDeclared? (primary args) state)
-                         (error "Error: variables cannot be re-declared")
+      ; In the case of scope declaration, we want a duplicate name
+      [(eq? op 'var) (if (isLive? (primary args) state)
+                         (error "Error: variables cannot be re-declared in the same scope")
                          (if (secondary? args)
-                             (lambda (inputState) (assign (primary args) (evaluateExpression (secondary args) inputState) inputState))
+                             ; If a value was given and it's not live in the scope,
+                             ; declare the name in the scope and assign it
+                             (lambda (inputState) (assign (primary args) (evaluateExpression (secondary args) inputState) (declare (primary args) inputState)))
+                             ; Otherwise, just make a duplicate undeclared binding
                              (lambda (inputState) (declare (primary args) inputState))
                              )
                          )]
@@ -55,10 +59,10 @@
     
     (cond
       ; Check for end of block
-      ;[(null? statement) newState]
+      [(eq? op 'end) (nextState (tossActiveLayer newState) tail echo break continue return throw)]
 
       ; Check for beginning of block
-      ;[(eq? op 'begin) (nextState (initializeNewLayer newState) (append-cps args statementList) echo break continue return throw)]
+      [(eq? op 'begin) (nextState (initializeNewLayer voidLayer newState) (append args (cons '(end) tail)) echo (lambda (brokenState) (break (tossActiveLayer brokenState))) (lambda (continuedState) (continue (tossActiveLayer continuedState))) return throw)]
       
       ; If we're returning, do that
       [(eq? 'return op) (return (evaluateExpression (primary (argList statement)) newState) newState)]
@@ -78,7 +82,7 @@
                             )
                         )]
 
-      ; If we break or continue, jump out with the newState
+      ; If we break or continue, jump out with the newState and toss the scope for this loop
       [(eq? op 'break) (break newState)]
       [(eq? op 'continue) (continue newState)]
 

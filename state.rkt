@@ -25,8 +25,9 @@
 
 (define state? list?)
 
-; Shortcut to a "nothing declared" state
-(define voidState (cons (makePairedList EMPTY EMPTY) null))
+; Shortcut to a "nothing declared" layer/state
+(define voidLayer (makePairedList EMPTY EMPTY))
+(define voidState (cons voidLayer null))
 
 
 ; Abstracts state structure away from interpreter
@@ -128,9 +129,13 @@
   )
 
 ; Assigns value to name in the current state, and returns the mutated state
+; NOTE: Variable must be declared somewhere in scope
 (define assign
   (lambda (name value state)
-    (stateWith name value (stateWithout name state))
+    (if (isLive? name state)
+        (stateWith name value (stateWithout name state))
+        (initializeNewLayer (peekActiveLayer state) (assign name value (stateHeritage state)))
+        )
     )
 )
 
@@ -144,10 +149,10 @@
     )
   )
 
-; Simply adds a new voidState (really a layer, but I'm too lazy to change that rn) to the front of the state
+; Simply adds a new layer to the front of the state
 (define initializeNewLayer
-  (lambda (state)
-    (makePairedList voidState state)
+  (lambda (layer state)
+    (cons layer state)
     )
   )
 
