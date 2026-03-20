@@ -55,7 +55,10 @@
     
     (cond
       ; Check for end of block
-      [(null? statement) newState]
+      ;[(null? statement) newState]
+
+      ; Check for beginning of block
+      ;[(eq? op 'begin) (nextState (initializeNewLayer newState) (append-cps args statementList) echo break continue return throw)]
       
       ; If we're returning, do that
       [(eq? 'return op) (return (evaluateExpression (primary (argList statement)) newState) newState)]
@@ -75,10 +78,26 @@
                             )
                         )]
 
+      ; If we break or continue, jump out with the newState
+      [(eq? op 'break) (break newState)]
+      [(eq? op 'continue) (continue newState)]
+
       ; If it's a while statement, keep reprocessing the statement until the condition is false or we break
       [(eq? op 'while) (if (eq? (evaluateCondition (primary args) newState) TRUE)
                            ; Put the true statement in front of while so it executes before checking again
-                           (nextState newState (cons (secondary args) statementList) echo break continue return throw)
+                           (nextState newState (cons (secondary args) statementList)
+                                      ; The while statement itself doesn't affect the state
+                                      echo
+
+                                      ; When we break, we take the state at that point and move to the tail
+                                      ; Reset next, break, and continue
+                                      (lambda (brokenState) (nextState brokenState tail echo echo echo return throw))
+
+                                      ; When we continue, we do the loop again immediately
+                                      (lambda (continuedState) (nextState continuedState (cons (secondary args) statementList) echo break continue return throw))
+
+                                      ; Don't need to be updated here
+                                      return throw)
 
                            ; If condition is false, do nothing
                            (nextState newState tail echo break continue return throw)
