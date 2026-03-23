@@ -33,8 +33,6 @@
     )
   )
 
-(define addStatement (lambda (statement statementList) (cons statement statementList)))
-
 
 
 
@@ -57,15 +55,8 @@
     (define tail (remainingStatements statementList))
     
     (cond
-<<<<<<< Updated upstream
-      ; Lets nextState be used for partial processing
-      ; I.e. we can call nextState on an arbitrary statementList with some initial state
-      ; Useful for try-catch
-      [(null? statementList) newState]
-=======
       ; If we're throwing, do that after tossing the try block scope
       [(eq? op 'throw) (throw (evaluateExpression (primary args) newState) newState)]
->>>>>>> Stashed changes
       
       ; Check for try-catch start
       [(eq? op 'try)
@@ -73,14 +64,6 @@
        (cond
          ; Three args must be a try-catch-finally
          ; Add try and finally to the statementList
-<<<<<<< Updated upstream
-         ; If we throw, reach it
-         [(ternary? args) (nextState newState (append (primary args) (secondary (secondary args)) tail) echo break continue return throw)]
-         ; If 2nd arg is catch, no finally
-         [(eq? (operator (secondary args)) 'catch) (echo)]
-         ; Must be a try-finally
-         [else (echo)]
-=======
          ; If we throw, replace the state and statement list
          [(not (null? (ternary args))) (nextState (initializeNewLayer voidLayer newState) (append (makePairedList (makeBlock (primary args)) (makeBlock (primaryArg (ternary args)))) tail)
                                      echo
@@ -154,7 +137,6 @@
                                   return
                                   throw
                                   )))]
->>>>>>> Stashed changes
            )
        ]
       
@@ -183,15 +165,6 @@
       [(eq? 'return op) (return (evaluateExpression (primary (argList statement)) newState) newState)]
       
       ; If we're assigning or declaring, pass that into next
-<<<<<<< Updated upstream
-      [(eq? 'var op) (if (isLive? (primary (argList statement)))
-                         (throw "Variable already live" state)
-                         (nextState newState tail (getStateMapping statement newState) break continue return throw)
-       )]
-      [(eq? '= op) (if (isDeclared? (primary (argList statement)))
-                       (nextState newState tail (getStateMapping statement newState throw) break continue return throw)
-                       (throw "Variable undeclared" state)
-=======
       [(eq? 'var op) (if (isLive? (primary (argList statement)) newState)
                          (error "Variable already live")
                          (nextState newState tail (getStateMapping statement newState) break continue return throw)
@@ -199,7 +172,6 @@
       [(eq? '= op) (if (isDeclared? (primary (argList statement)) newState)
                        (nextState newState tail (getStateMapping statement newState) break continue return throw)
                        (error "Variable undeclared")
->>>>>>> Stashed changes
                        )]
 
       ; If it's an if statement, evaluate the condition and apply next appropriately
@@ -271,11 +243,7 @@
                ; Return
                (lambda (value state) (echo value))
                ; Throw
-<<<<<<< Updated upstream
-               (lambda (exception state) (error exception))
-=======
                (lambda (exception state) (makePairedList exception state))
->>>>>>> Stashed changes
                )
     )
   )

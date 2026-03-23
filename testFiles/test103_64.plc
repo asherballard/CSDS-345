@@ -1,0 +1,7 @@
+var x = 2;
+while (x < 128)
+  if (x == 64)
+    break;
+  else
+    x = x * 2;
+return x;
