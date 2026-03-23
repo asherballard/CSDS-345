@@ -11,6 +11,21 @@
 (define secondary cadr)
 (define ternary caddr)
 
+; For making an arbitrary statementList a block
+(define makeBlock
+  (lambda (statementList)
+    (cons 'begin statementList)
+    )
+  )
+
+; Abstracts statementList structure
+(define addStatement (lambda (statement statementList) (cons statement statementList)))
+
+; For applying to a node
+(define primaryArg (lambda (statement) (primary (argList statement))))
+(define secondaryArg (lambda (statement) (secondary (argList statement))))
+(define ternaryArg (lambda (statement) (ternary (argList statement))))
+
 ; Abstract getting the operator and arguments from a node
 ; For applying to nodes
 (define operator car)

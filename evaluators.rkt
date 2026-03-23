@@ -51,7 +51,11 @@
              ; If magnitude-based, evaluate each arg as an integer, and return its value
              [(magnitudeBased? (operator node))
                   ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateNum x state)) (argList node) echo))]
-                  
+
+             ; Catch not, which only has one argument
+             [(eq? '! (operator node))
+              ((convertOperator (operator node)) (evaluateCondition (primary (argList node)) state))]
+             
              ; If boolean-based, evaluate each arg as such, and return its value
              [(booleanBased? (operator node))
                   ((convertOperator (operator node)) (applyToEach-cps (lambda (x) (evaluateCondition x state)) (argList node) echo))]

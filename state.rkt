@@ -71,7 +71,7 @@
     ; Check to make sure the name isn't taken already (should be redundant, but SOMEONE always finds a way)
     ; Note: this allows for redeclaration of a variable if it hasn't been declared IN THE CURRENT LAYER. To prevent clashes.
     (if (isLive? name state)
-        (error "Error: variable name already declared in current scope")
+        (error "Variable name already declared in current scope")
         (stateWithLayer updatedLayer (stateHeritage state))
         )
     )
@@ -107,7 +107,7 @@
     (if (eq? -1 index)
         ; If name isn't in state, check other layers. If still no, error
         (if (topLayerActive? state)
-            (error "Error: attempted to access undeclared variable")
+            (error "Attempted to access undeclared variable")
             
             ; This will error if necessary, which breaks.
             (lookupBinding name (stateHeritage state))
@@ -121,7 +121,7 @@
         ; We don't need to check for bottom layer here, since we know the variable must be defined in this layer,
         ; if at all
         ((lambda (value) (if (isEMPTY? value)
-            (error "Error: attempted to access undefined variable")
+            (error "Attempted to access undefined variable")
             value
             )) (getElement index (getLayerValueList (peekActiveLayer state)) echo))
         )
@@ -148,6 +148,19 @@
         )
     )
   )
+
+; Combines declare and assign for readability
+(define declareAssign
+  (lambda (name value state)
+    (assign name value (declare name state))
+    )
+  )
+
+; Keeps stateWithout from being directly called
+(define free
+  (lambda (name state)
+    (stateWithout name state)
+    ))
 
 ; Simply adds a new layer to the front of the state
 (define initializeNewLayer
