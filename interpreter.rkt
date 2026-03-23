@@ -65,10 +65,12 @@
       [(eq? op 'begin) (nextState (initializeNewLayer voidLayer newState) (append args (cons '(end) tail)) echo (lambda (brokenState) (break (tossActiveLayer brokenState))) (lambda (continuedState) (continue (tossActiveLayer continuedState))) return throw)]
       
       ; If we're returning, do that
+      
       [(eq? 'return op) (return (evaluateExpression (primary (argList statement)) newState) newState)]
       
       ; If we're assigning or declaring, pass that into next
       [(or (eq? 'var op) (eq? '= op)) (nextState newState tail (getStateMapping statement newState) break continue return throw)]
+      
 
       ; If it's an if statement, evaluate the condition and apply next appropriately
       [(eq? op 'if) (if (eq? (evaluateCondition (primary args) newState) TRUE)
@@ -106,6 +108,21 @@
                            ; If condition is false, do nothing
                            (nextState newState tail echo break continue return throw)
                            )]
+
+      ;try statement, passes the current state into the throw arg to revert
+      [(eq? op 'try) (nextState newState (cons args tail) echo break continue return state)]
+
+      ;catch, checks if throw is echo(5 is a placeholder), if yes, skips catch, otherwise run catch
+      [(eq? op 'catch) (if (eq? throw 5)
+       (nextState state (secondary tail) echo break continue return (throw (primary tail)))
+       (nextState newState tail echo break continue return throw))]
+      
+      ;finally
+      [(eq? op 'finally) (nextState newState tail echo break continue return throw)]
+
+      ;throw, stops the try block and moves straight to the catch block after removing try's changes to the state
+      [(eq? op 'throw) (nextState throw (cons (secondary args) tail) echo break continue return 5)]
+      
       [else (error "Unrecognized operator when progressing")]
       )
     )
