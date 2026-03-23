@@ -36,6 +36,8 @@
 (define addStatement (lambda (statement statementList) (cons statement statementList)))
 
 
+
+
 ; =======================
 ; STATE MAPPING FUNCTIONS
 ; =======================
@@ -55,10 +57,15 @@
     (define tail (remainingStatements statementList))
     
     (cond
+<<<<<<< Updated upstream
       ; Lets nextState be used for partial processing
       ; I.e. we can call nextState on an arbitrary statementList with some initial state
       ; Useful for try-catch
       [(null? statementList) newState]
+=======
+      ; If we're throwing, do that after tossing the try block scope
+      [(eq? op 'throw) (throw (evaluateExpression (primary args) newState) newState)]
+>>>>>>> Stashed changes
       
       ; Check for try-catch start
       [(eq? op 'try)
@@ -66,12 +73,88 @@
        (cond
          ; Three args must be a try-catch-finally
          ; Add try and finally to the statementList
+<<<<<<< Updated upstream
          ; If we throw, reach it
          [(ternary? args) (nextState newState (append (primary args) (secondary (secondary args)) tail) echo break continue return throw)]
          ; If 2nd arg is catch, no finally
          [(eq? (operator (secondary args)) 'catch) (echo)]
          ; Must be a try-finally
          [else (echo)]
+=======
+         ; If we throw, replace the state and statement list
+         [(not (null? (ternary args))) (nextState (initializeNewLayer voidLayer newState) (append (makePairedList (makeBlock (primary args)) (makeBlock (primaryArg (ternary args)))) tail)
+                                     echo
+                                     break
+                                     continue
+                                     return
+                                     (lambda (exception thrownState)
+                                       ; We declare and assign "e" with the exception value in a new scope in the original state (before try)
+                                       (nextState (declareAssign (operator (primaryArg (secondary args))) exception (initializeNewLayer voidLayer (tossActiveLayer thrownState)))
+                                                  (append
+                                                   ; The catch block
+                                                   (secondaryArg (secondary args))
+
+                                                   ; Signal to drop the "catch" scope
+                                                   '((end))
+                                                   
+                                                   ; The finally block, treated as such
+                                                   (list (makeBlock (primaryArg (ternary args))))
+                                                   
+                                                   ; The tail
+                                                   tail)
+                                                  echo
+                                                  break
+                                                  continue
+                                                  return
+                                                  throw
+                                                  )))]
+
+         ; If 2nd arg is catch and no 3rd arg, we have no finally
+         [(eq? (operator (secondary args)) 'catch)
+          (nextState newState (addStatement (makeBlock (primary args)) tail)
+                     echo
+                     break
+                     continue
+                     return
+                     (lambda (exception thrownState)
+                       (nextState (declareAssign (operator (primaryArg (secondary args))) exception (initializeNewLayer voidLayer (tossActiveLayer thrownState)))
+                                  (append
+                                   ; The catch block
+                                   (secondaryArg (secondary args))
+
+                                   ; Signal to drop the scope
+                                   '((end))
+
+                                   ; the tail
+                                   tail)
+                                  echo
+                                  break
+                                  continue
+                                  return
+                                  throw
+                                  )))]
+
+         ; Must be a try-finally
+         [else  (nextState newState (addStatement (makeBlock (primary args)) tail)
+                     echo
+                     break
+                     continue
+                     return
+                     (lambda (exception thrownState)
+                       (nextState (tossActiveLayer thrownState)
+                                  (addStatement
+                                   ; The finally block
+                                   (makeBlock (primaryArg (secondary args)))
+
+                                   ; The tail
+                                   tail)
+                                  echo
+                                  break
+                                  continue
+                                  return
+                                  throw
+                                  )))]
+>>>>>>> Stashed changes
            )
        ]
       
@@ -100,6 +183,7 @@
       [(eq? 'return op) (return (evaluateExpression (primary (argList statement)) newState) newState)]
       
       ; If we're assigning or declaring, pass that into next
+<<<<<<< Updated upstream
       [(eq? 'var op) (if (isLive? (primary (argList statement)))
                          (throw "Variable already live" state)
                          (nextState newState tail (getStateMapping statement newState) break continue return throw)
@@ -107,6 +191,15 @@
       [(eq? '= op) (if (isDeclared? (primary (argList statement)))
                        (nextState newState tail (getStateMapping statement newState throw) break continue return throw)
                        (throw "Variable undeclared" state)
+=======
+      [(eq? 'var op) (if (isLive? (primary (argList statement)) newState)
+                         (error "Variable already live")
+                         (nextState newState tail (getStateMapping statement newState) break continue return throw)
+       )]
+      [(eq? '= op) (if (isDeclared? (primary (argList statement)) newState)
+                       (nextState newState tail (getStateMapping statement newState) break continue return throw)
+                       (error "Variable undeclared")
+>>>>>>> Stashed changes
                        )]
 
       ; If it's an if statement, evaluate the condition and apply next appropriately
@@ -140,7 +233,8 @@
                                       (lambda (continuedState) (nextState continuedState (addStatement (secondary args) statementList) echo break continue return throw))
 
                                       ; Don't need to be updated here
-                                      return throw)
+                                      return
+                                      throw)
 
                            ; If condition is false, do nothing
                            (nextState newState tail echo break continue return throw)
@@ -177,7 +271,11 @@
                ; Return
                (lambda (value state) (echo value))
                ; Throw
+<<<<<<< Updated upstream
                (lambda (exception state) (error exception))
+=======
+               (lambda (exception state) (makePairedList exception state))
+>>>>>>> Stashed changes
                )
     )
   )

@@ -1,5 +1,83 @@
 #lang racket
 (provide (all-defined-out))
+<<<<<<< Updated upstream
+=======
+
+; ==================
+; SYNTAX ABSTRACTION
+; ==================
+
+; Abstract getting each argument from an argList
+; For applying to an argList
+(define primary car)
+(define secondary cadr)
+(define ternary caddr)
+
+; For making an arbitrary statementList a block
+(define makeBlock
+  (lambda (statementList)
+    (cons 'begin statementList)
+    )
+  )
+
+; Abstracts statementList structure
+(define addStatement (lambda (statement statementList) (cons statement statementList)))
+
+; For applying to a node
+(define primaryArg (lambda (statement) (primary (argList statement))))
+(define secondaryArg (lambda (statement) (secondary (argList statement))))
+(define ternaryArg (lambda (statement) (ternary (argList statement))))
+
+; Abstract getting the operator and arguments from a node
+; For applying to nodes
+(define operator car)
+(define argList cdr)
+
+; Abstract boolean values
+(define TRUE 'true)
+(define FALSE 'false)
+
+; Statement syntax abstraction
+; For applying to statementList
+(define remainingStatements cdr)
+(define currentStatement car)
+
+
+; Does argList have a next arg?
+(define secondary?
+  (lambda (args)
+    (not (null? (cdr args)))
+    )
+  )
+
+; Does argList have a next-next arg? (I.e. a third argument)
+(define ternary?
+  (lambda (args)
+    (not (null? (cddr args)))
+    )
+  )
+
+; Is atom a boolean literal? (I.e. TRUE or FALSE)
+(define isBool?
+  (lambda (atom)
+    (or (eq? atom TRUE) (eq? atom FALSE))
+    )
+  )
+
+; ================
+; HELPER FUNCTIONS
+; ================
+
+; Is element a member of lis? Returns #t or #f
+(define memberOf?
+  (lambda (element lis)
+    (if (eq? (indexof element lis) -1) #f #t)
+    )
+  )
+
+
+; Returns the index of an element in a list, zero-indexed, or -1 if not found.
+>>>>>>> Stashed changes
 (define indexof
   (lambda (x lis)
    (define indexof-break

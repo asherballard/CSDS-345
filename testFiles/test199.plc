@@ -1,0 +1,11 @@
+var x = 0;
+try {
+    while (x <= 100){
+        if (x == 5)
+          throw x;
+        x = x + 1;
+      }
+  }
+catch (e){
+    return e;
+  }

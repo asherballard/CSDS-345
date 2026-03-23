@@ -1,0 +1,24 @@
+var x = 0;
+try {
+    while (x <= 99){
+      var i = 0;
+
+      try {
+       while (i <= 9){
+          if (i == 6)
+           throw i;
+         i = i + 1;
+        }
+      }
+      catch (ones){
+          if (x == 50)
+            throw ones;
+        }
+
+      x = x + 1;
+      }
+  }
+catch (outer_e){
+    return x + outer_e;
+  }
+return x;
