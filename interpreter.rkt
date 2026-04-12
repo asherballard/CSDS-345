@@ -29,6 +29,8 @@
                              )]
       ; If the statement is an assignment, check to make sure var is declared
       [(eq? op '=) (lambda (inputState) (assign (primary args) (evaluateExpression (secondary args) inputState) inputState))]
+
+      [(eq? op 'function) (lambda (inputState) (assign (primary args) (cons (secondary args) (ternary args)) (declare (primary args) inputState)))]
       )
     )
   )
@@ -211,6 +213,12 @@
                            ; If condition is false, do nothing
                            (nextState newState tail echo break continue return throw)
                            )]
+
+      ;add if for main
+      [(eq? op 'function) (nextState newState tail (getStateMapping statement newState) break continue return throw)]
+
+      ;lookup function, add parameters to state, add function body to statement list
+      [(eq? op 'funcall) (nextState (assignParams (primary (lookUpBinding (primary args) state))) (cons (secondary (lookUpBinding (primary args) state)) tail) echo break continue return throw)]
 
       ; Helps in debugging
       [else (error "Unrecognized operator when progressing")]

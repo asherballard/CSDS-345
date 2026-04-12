@@ -1,4 +1,5 @@
 #lang racket
+(require "state.rkt")
 (provide (all-defined-out))
 
 ; ==================
@@ -132,3 +133,15 @@
          )
     )
   )
+
+(define assignParams
+  (lambda (formal actual state)
+    (if (null? (secondary actual))
+        (assignParamsHelper (primary formal) (primary actual) state)
+        (assignParams (secondary formal) (secondary actual) state))))
+
+(define assignParamsHelper
+  (lambda (formal actual state)
+    (if (isLive? formal state)
+        (assign formal actual state)
+        (assign formal actual (declare formal state)))))
