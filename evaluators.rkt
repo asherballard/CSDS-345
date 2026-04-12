@@ -6,6 +6,9 @@
 (provide (all-defined-out))
 
 
+; M_value of a function call. Note: DOES NOT HANDLE FUNCTIONS THAT DON'T RETURN
+(define evaluateFunction
+
 ; Returns the appropriate evaluation of an expression (variable, literal, or nested expression)
 ; Input could be any expression
 (define evaluateExpression

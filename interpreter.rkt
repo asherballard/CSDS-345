@@ -3,7 +3,7 @@
 (require "state.rkt")
 (require "operators.rkt")
 (require "evaluators.rkt")
-(require "simpleParser.rkt")
+(require "functionParser.rkt")
 (provide (all-defined-out))
 
 ; ============================
@@ -218,9 +218,61 @@
     )
   )
 
-; ==================
-; MAIN FUNCTION
-; ==================
+; =====================
+; INTERPRETER FUNCTIONS
+; =====================
+
+; The initial state generator, which grabs functions and does variable assignments before evaluating main()
+(define processOuterLayer
+  (lambda (statementList state)
+    
+    ; Get statement info once
+    (define statement (if (null? statementList) null (currentStatement statementList)))
+    (define op (operator statement))
+    (define args (argList statement))
+    (define tail (if (null? statementList) null (remainingStatements statementList)))
+    
+    (cond
+      ; If we've reach the end of the outer layer, begin interpreting main
+      [(null? statement) (runMain)]
+      
+      ; If function, add it to the state
+      [(eq? op 'function) (stateWithFunction args state)]
+
+      ; If assignment, add it to the state
+      [(eq? 'var op) (if (isLive? (primary (argList statement)) state)
+                         (error "Variable already live")
+                         (processOuterLayer tail (getStateMapping statement state))
+       )]
+      [(eq? '= op) (if (isDeclared? (primary (argList statement)) state)
+                       (processOuterLayer tail (getStateMapping statement state))
+                       (error "Variable undeclared")
+                       )]
+
+      [else (error "How did we get here?")]
+      )
+    )
+  )
+
+
+; Evaluates the main() function with a given initial state
+(define runMain
+  (lambda (mainStatementList state)
+    (nextState state mainStatementList
+               ; Next
+               echo
+               ; Break
+               (lambda (brokenState) (error "Break outside of a loop"))
+               ; Continue
+               (lambda (continuedState) (error "Continue outsie of a loop"))
+               ; Return
+               (lambda (value state) (echo value))
+               ; Throw
+               (lambda (exception thrownState) (error "Threw outside of a try-catch"))
+               )
+    )
+  )
+
 
 ; The main interpret function
 ; Literally just starts the stateProgress lawnmower with an initial state and statementList
