@@ -2,6 +2,11 @@
 (require "helpers.rkt")
 (provide (all-defined-out))
 
+; ==================
+; STATE ABSTRACTIONS
+; ==================
+
+
 ; Abstract the list of names and values
 ; For applying to a LAYER
 (define getLayerNameList car)
@@ -30,14 +35,9 @@
 (define voidState (cons voidLayer null))
 
 
-; Abstracts state structure away from interpreter
-; Simply returns #t or #f, depending on whether name is in state's nameList
-#|(define isDeclared?
-  (lambda (name state)
-    (memberOf? name (getLayerNameList (peekTopLayer state)))
-    )
-  )
-|#
+; =============
+; STATE HELPERS
+; =============
 
 ; Not tail recursive, but doesn't have to be!
 (define isDeclared?
@@ -53,6 +53,70 @@
 (define isLive?
   (lambda (name state)
     (memberOf? name (getLayerNameList (peekActiveLayer state)))
+    )
+  )
+
+(define trimStateTo
+  (lambda (targetLength state)
+    (define stateLength (length state))
+    (define heightDifference (- stateLength targetLength))
+    (if (eq? 0 heightDifference)
+        state
+        (matchLength (+ heightDifference -1) (tossActiveLayer state))
+        )
+    )
+  )
+
+(define matchLength
+  (lambda (heightDifference state)
+    (if (eq? heightDifference 0)
+        state
+        (matchLength (+ heightDifference -1) (tossActiveLayer state))
+        )
+    )
+  )
+
+
+; ==================
+; FUNCTION FUNCTIONS
+; ==================
+
+(define createEnvironment
+  (lambda (actualParameters closure state)
+    (addParameterLayer
+     (getFormalParameters closure)
+     actualParameters
+     (trimStateTo (getScopeLevel closure) state))
+    )
+  )
+
+(define addParameterLayer
+  (lambda (formalParameters actualParameters state)
+    (initializeNewLayer (makePairedList formalParameters actualParameters) state)
+    )
+  )
+
+(define createClosure
+  (lambda (formalParameters body scopeLevel)
+    (list formalParameters body scopeLevel)
+    )
+  )
+
+(define getBody
+  (lambda (closure)
+    (car (cdr closure))
+    )
+  )
+
+(define getFormalParameters
+  (lambda (closure)
+    (car closure)
+    )
+  )
+
+(define getScopeLevel
+  (lambda (closure)
+    (car (cdr (cdr closure)))
     )
   )
 
