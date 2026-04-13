@@ -31,12 +31,31 @@
        )]
 
       ; If assignment, add it to the state
-      [(eq? 'var op) (if (isLive? (primary (argList statement)) state)
+      #|[(eq? 'var op) (if (isLive? (primary (argList statement)) state)
                          (error "Variable already live")
                          (processOuterLayer tail ((getStateMapping statement state) state))
        )]
       [(eq? '= op) (if (isDeclared? (primary (argList statement)) state)
                        (processOuterLayer tail ((getStateMapping statement state) state))
+                       (error "Variable undeclared")
+                       )]|#
+      [(eq? 'var op) (if (isLive? (primary (argList statement)) state)
+                         (error "Variable already live")
+                         (if (secondary? (argList statement))
+                             (evaluateExpression (secondary (argList statement)) state echoDouble
+                                                 (lambda (val retState)
+                                                   (define nState (declareAssign (primary (argList statement)) val retState))
+                                                   (processOuterLayer tail nState)
+                                                   )
+                                                 )
+                             (processOuterLayer tail (declare (primary (argList statement))))
+                             )
+       )]
+      [(eq? '= op) (if (isDeclared? (primary (argList statement)) state)
+                       (evaluateExpression (secondary (argList statement)) state echoDouble (lambda (val retState)
+                                                                                              (define nState (assign (primary (argList statement)) val retState))
+                                                                                              (processOuterLayer tail nState)
+                                                                             ))
                        (error "Variable undeclared")
                        )]
 
