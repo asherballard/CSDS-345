@@ -21,7 +21,7 @@
 ; Helper function that turns a statement into a state mapping for getting "next"
 ; I pass throw into here because it involved less line changes
 (define getStateMapping
-  (lambda (statement state)
+  (lambda (statement state throw)
     (define args (argList statement))
     (define op (operator statement))
     (cond
@@ -33,12 +33,12 @@
       [(eq? op 'var) (if (secondary? args)
                              ; If a value was given and it's not live in the scope,
                              ; declare the name in the scope and assign it
-                             (lambda (inputState) (declareAssign (primary args) (getReturnValue (evaluateExpression (secondary args) inputState)) inputState))
+                             (lambda (inputState) (evaluateExpression (secondary args) inputState throw (lambda (retValState) (declareAssign (primary args) (getReturnValue retValState) (getReturnState retValState)))))
                              ; Otherwise, just make a duplicate undeclared binding
                              (lambda (inputState) (declare (primary args) inputState))
                              )]
       ; If the statement is an assignment, check to make sure var is declared
-      [(eq? op '=) (lambda (inputState) (assign (primary args) (getReturnValue (evaluateExpression (secondary args) inputState)) inputState))]
+      [(eq? op '=) (lambda (inputState) (assign (primary args) (getReturnValue (evaluateExpression (secondary args) inputState throw)) inputState))]
       )
     )
   )
@@ -46,10 +46,10 @@
 ; Wrapper to make evaluateExpression tail-recursive
 ; While it technically takes an arbitrary evaluator, it doesn't actually work with others
 (define evaluateArgs-cps
-  (lambda (evaluator argLis state return)
+  (lambda (argLis state return)
     (define currentArg (if (null? argLis) null (car argLis)))
     (define remainingArgs (if (null? argLis) null (cdr argLis)))
-    (define currentResult (if (null? currentArg) null (evaluator currentArg state)))
+    (define currentResult (if (null? currentArg) null (evaluateExpression currentArg state echo echo)))
     
     (define addArg
       (lambda (newArg argStateList)
@@ -61,7 +61,6 @@
         (return (list null state))
         
         (evaluateArgs-cps
-         evaluator
          remainingArgs
          (getReturnState currentResult)
          (lambda (doneState) (return (addArg (getReturnValue currentResult) doneState)))
@@ -72,12 +71,34 @@
   )
 
 (define processOperation
-  (lambda (state node)
-    (define evalArgsState (evaluateArgs-cps evaluateExpression (argList node) state echo))
-    (define evalArgs (getEvaluatedArgs evalArgsState))
-    (define evalState (getEvaluatedState evalArgsState))
-    (define result ((convertOperator (operator node)) evalArgs))
-    (list result evalState)
+  (lambda (state node throw return)
+    (processArgs (list null state) (argList node) throw
+                 (lambda (finishedArgValState)
+                   (define evalArgs (getReturnValue finishedArgValState))
+                   (define evalState (getReturnState finishedArgValState))
+                   (return ((convertOperator (operator node)) evalArgs) evalState)
+                   )
+                 )
+    )
+  )
+
+(define processArgs
+  (lambda (valState args throw return)
+    (define addArg (lambda (argVal valueState)
+      (list (append (getReturnValue valueState) (list argVal)) (getReturnState valueState))
+      ))
+    
+    (if (null? args)
+        (return valState)
+        (evaluateExpression (car args) (getReturnState valState) throw
+                            (lambda (val retState)
+                              (processArgs (addArg val valState)
+                                           (cdr args)
+                                           throw
+                                           return)
+                              )
+                            )
+        )
     )
   )
 
@@ -97,30 +118,30 @@
 ; Input could be any expression
 ; To allow for side-effects, will also return a state as the 2nd element in a list
 (define evaluateExpression
-  (lambda (node state)
+  (lambda (node state throw return)
      (cond
        ; ==========
        ; Is the expression a simple one? I.e. a number, boolean literal, or variable name
 
        ; If the node is a number, simple return
-       [(number? node) (list node state)]
+       [(number? node) (return node state)]
 
        ; If the node is a symbol, check if it's a boolean literal. If so, return the literal
        [(symbol? node) (if (isBool? node)
-                           (list node state)
+                           (return node state)
                            
                            ; If it isn't a boolean literal, it must be a variable
                            ; Return the variable's binding
-                           (list (lookupBinding node state) state))]
+                           (return (lookupBinding node state) state))]
 
        ; Ok, the expression is nested (not a literal or variable). Is it numerical?
-       [(numerical? (operator node)) (evaluateNum node state)]
+       [(numerical? (operator node)) (evaluateNum node state throw return)]
 
        ; Is it a function call?
-       [(eq? 'funcall (operator node)) (callFunction (primary (argList node)) (cdr (argList node)) state)]
+       [(eq? 'funcall (operator node)) (callFunction (primary (argList node)) (cdr (argList node)) state throw return)]
 
        ; Must be a condition
-      [else (evaluateCondition node state)]
+      [else (evaluateCondition node state throw return)]
       )
     )
   )
@@ -131,16 +152,16 @@
 ; Takes a condition and a state
 ; Returns a boolean (TRUE or FALSE)
 (define evaluateCondition
-  (lambda (node state)
+  (lambda (node state throw return)
     (cond
       ; Is it a bool literal? Then return it
-      [(isBool? node) (list node state)]
+      [(isBool? node) (return node state)]
       
       ; Is it a variable name? Return it's binding
-      [(symbol? node) (list (lookupBinding node state) state)]
+      [(symbol? node) (return (lookupBinding node state) state)]
       
       ; It must be an operation
-      [else (processOperation state node)]
+      [else (processOperation state node throw return)]
       )
  )
 )
@@ -148,16 +169,16 @@
 ; Takes an integer value (can be an expression or a variable name) and a state
 ; Returns an integer
 (define evaluateNum
-  (lambda (node state)
+  (lambda (node state throw return)
     (cond
       ; Is it a number? Return it
-      [(number? node) (list node state)]
+      [(number? node) (return node state)]
       
       ; Is it a variable name? Return its binding
-      [(symbol? node) (list (lookupBinding node state) state)]
+      [(symbol? node) (return (lookupBinding node state) state)]
       
       ; It must be an operation, apply the operation and return the value
-      [else (processOperation state node)]
+      [else (processOperation state node throw return)]
       )
     )
   )
@@ -200,34 +221,28 @@
 ; When returning, provides a list consisting of the value, and the environment at the time
 ; When throwing, provides the updated environment at throw time
 (define callFunction
-  (lambda (name actualParameters state)
+  (lambda (name actualParameters state throw return)
     (define closure (lookupBinding name state))
-
-    ; Evaluate the actual parameters using call-by-value
-    (define evaluatedParameters
-      (applyToEach-cps
-       (lambda (node) (getReturnValue (evaluateExpression node state)))
-       actualParameters
-       echo))
-    
-    (define environment (createEnvironment evaluatedParameters closure state))
     (define callingLevel (length state))
 
     ; Call the statementList evaluator with the environment on the body
     ; Note: return will provide a list where the 1st element is the returned value,
     ; and the 2nd is the environment at the time
-    (nextState environment (getBody closure)
-               ; Next
-               echo
-               ; Break
-               (lambda (brokenState) (error "Break outside of a loop"))
-               ; Continue
-               (lambda (continuedState) (error "Continue outsie of a loop"))
-               ; Return
-               (lambda (value returnedState) (echo (list value (updateHeritage state returnedState))))
-               ; Throw
-               (lambda (exception thrownState) (echo (updateHeritage state thrownState)))
-               )
+    (processArgs (list null state) actualParameters throw (lambda (evaldValState)
+                                                            (nextState (createEnvironment (getReturnValue evaldValState) closure state) (getBody closure)
+                                                                       ; Next
+                                                                       echo
+                                                                       ; Break
+                                                                       (lambda (brokenState) (error "Break outside of a loop"))
+                                                                       ; Continue
+                                                                       (lambda (continuedState) (error "Continue outsie of a loop"))
+                                                                       ; Return
+                                                                       (lambda (value returnedState) (return value (updateHeritage state returnedState)))
+                                                                       ; Throw
+                                                                       (lambda (exception thrownState) (throw exception (updateHeritage state thrownState)))
+                                                                       )
+                                                            )
+                                                            )
     )
   )
 
@@ -257,7 +272,9 @@
       ; to update the state properly, we skip ahead to find the function before declaring it, then proceeding.
       
       [(eq? op 'funcall) ((lambda (funcState)
-                            (nextState (getReturnState (callFunction (primary args) (cdr args) funcState)) tail echo break continue return throw)
+                            (callFunction (primary args) (cdr args) funcState throw (lambda (value retState)
+                                                                                      (nextState retState tail echo break continue return throw)
+                                                                                      ))
                             )
                           (if (isDeclared? (primary args) newState)
                              newState
@@ -265,10 +282,11 @@
                              ))]
       
       ; If we're throwing, do that after tossing the try block scope
-      [(eq? op 'throw) ((lambda (exceptionState)
-                          (throw (getReturnValue exceptionState) (getReturnState exceptionState))
-                          )
-                               (evaluateExpression (primary args) newState)
+      [(eq? op 'throw) (evaluateExpression (primary args) newState
+                                           echoDouble
+                                           (lambda (exception thrownState)
+                                             (throw exception (tossActiveLayer thrownState))
+                                             )
                                )]
       
       ; Check for try-catch start
@@ -375,24 +393,36 @@
                                   throw)]
       
       ; If we're returning, do that
-      [(eq? 'return op) ((lambda (valState)
-                           (return (getReturnValue valState) (tossActiveLayer (getReturnState valState)))
-                           )
-                         (evaluateExpression (primary (argList statement)) newState)
-                        )]
+      [(eq? 'return op) (evaluateExpression (primary (argList statement)) newState throw
+                                            (lambda (value retState)
+                                              (return value (tossActiveLayer retState))
+                                              )
+                                            )
+                        ]
       
       ; If we're assigning or declaring, pass that into next
       [(eq? 'var op) (if (isLive? (primary (argList statement)) newState)
                          (error "Variable already live")
-                         (nextState newState tail (getStateMapping statement newState) break continue return throw)
+                         (if (secondary? args)
+                             (evaluateExpression (secondary args) newState throw
+                                                 (lambda (val retState)
+                                                   (define nState (declareAssign (primary args) val retState))
+                                                   (nextState nState tail echo break continue return throw)
+                                                   )
+                                                 )
+                             (nextState (declare (primary args) newState) tail echo break continue return throw)
+                             )
        )]
       [(eq? '= op) (if (isDeclared? (primary (argList statement)) newState)
-                       (nextState newState tail (getStateMapping statement newState) break continue return throw)
+                       (evaluateExpression (secondary args) newState throw (lambda (val retState)
+                                                                             (define nState (assign (primary args) val retState))
+                                                                             (nextState nState tail echo break continue return throw)
+                                                                             ))
                        (error "Variable undeclared")
                        )]
 
       ; If it's an if statement, evaluate the condition and apply next appropriately
-      [(eq? op 'if) (if (eq? (getReturnValue (evaluateCondition (primary args) newState)) TRUE)
+      [(eq? op 'if) (if (eq? (evaluateExpression (primary args) newState throw (lambda (val retState) val)) TRUE)
                         ; True condition means we put the first statement on the statementList
                         (nextState newState (addStatement (secondary args) tail) echo break continue return throw)
 
@@ -408,7 +438,7 @@
       [(eq? op 'continue) (continue newState)]
 
       ; If it's a while statement, keep reprocessing the statement until the condition is false or we break
-      [(eq? op 'while) (if (eq? (getReturnValue (evaluateCondition (primary args) newState)) TRUE)
+      [(eq? op 'while) (if (eq? (evaluateExpression (primary args) newState throw (lambda (val retState) val)) TRUE)
                            ; Put the true statement in front of while so it executes before checking again
                            (nextState newState (addStatement (secondary args) statementList)
                                       ; The while statement itself doesn't affect the state

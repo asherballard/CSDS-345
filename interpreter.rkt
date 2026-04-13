@@ -49,7 +49,7 @@
 ; Evaluates the main() function with a given initial state
 (define runMain
   (lambda (state)
-    (getReturnValue (callFunction 'main null state))
+    (getReturnValue (callFunction 'main null state echoDouble echoDouble))
     )
   )
 
