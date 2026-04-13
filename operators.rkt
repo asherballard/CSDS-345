@@ -203,13 +203,21 @@
 
   (define greaterOrEqual?
     (lambda (args)
-      (not* (lesser? args))
+      (cond
+        [(eq? (lesser? args) TRUE) FALSE]
+        [(eq? (lesser? args) FALSE) TRUE]
+        [else (error "Invalid args provided to greaterOrEqual?")]
+        )
       )
     )
 
 
   (define lesserOrEqual?
     (lambda (args)
-      (not* (greater? args))
+      (cond
+        [(eq? (greater? args) TRUE) FALSE]
+        [(eq? (greater? args) FALSE) TRUE]
+        [else (error "Invalid args provided to greaterOrEqual?")]
+        )
       )
     )
