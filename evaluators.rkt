@@ -5,94 +5,33 @@
 (require "operators.rkt")
 (provide (all-defined-out))
 
-;
-(define getReturnValue
-  (lambda (valState)
-    (primary valState)
-    )
-  )
 
-(define getReturnState
-  (lambda (valState)
-    (secondary valState)
-    )
-  )
-
-; Helper function that turns a statement into a state mapping for getting "next"
-; I pass throw into here because it involved less line changes
-(define getStateMapping
-  (lambda (statement state throw)
-    (define args (argList statement))
-    (define op (operator statement))
-    (cond
-      [(eq? op 'funcall) (lambda (inputState)
-                           (getReturnState (callFunction (primary args) (cdr args) inputState)))]
-      
-      ; If the statement is a declaration, check if its a redeclaration, then parse as appropriate
-      ; In the case of scope declaration, we want a duplicate name
-      [(eq? op 'var) (if (secondary? args)
-                             ; If a value was given and it's not live in the scope,
-                             ; declare the name in the scope and assign it
-                             (lambda (inputState) (evaluateExpression (secondary args) inputState throw (lambda (retValState) (declareAssign (primary args) (getReturnValue retValState) (getReturnState retValState)))))
-                             ; Otherwise, just make a duplicate undeclared binding
-                             (lambda (inputState) (declare (primary args) inputState))
-                             )]
-      ; If the statement is an assignment, check to make sure var is declared
-      [(eq? op '=) (lambda (inputState) (assign (primary args) (getReturnValue (evaluateExpression (secondary args) inputState throw)) inputState))]
-      )
-    )
-  )
-
-; Wrapper to make evaluateExpression tail-recursive
-; While it technically takes an arbitrary evaluator, it doesn't actually work with others
-(define evaluateArgs-cps
-  (lambda (argLis state return)
-    (define currentArg (if (null? argLis) null (car argLis)))
-    (define remainingArgs (if (null? argLis) null (cdr argLis)))
-    (define currentResult (if (null? currentArg) null (evaluateExpression currentArg state echo echo)))
-    
-    (define addArg
-      (lambda (newArg argStateList)
-        (cons (cons newArg (car argStateList)) (cdr argStateList))
-        )
-      )
-    
-    (if (null? argLis)
-        (return (list null state))
-        
-        (evaluateArgs-cps
-         remainingArgs
-         (getReturnState currentResult)
-         (lambda (doneState) (return (addArg (getReturnValue currentResult) doneState)))
-         )
-        
-      )
-    )
-  )
-
+; Takes in an initial state, a operational node, and the throw and return continuations
+; Evaluates the node's arguments and updates the state with side effects,
+; then if nothing was thrown, applies the operator to the evaluated arguments
+; and returns the value and updated state
 (define processOperation
   (lambda (state node throw return)
-    (processArgs (list null state) (argList node) throw
-                 (lambda (finishedArgValState)
-                   (define evalArgs (getReturnValue finishedArgValState))
-                   (define evalState (getReturnState finishedArgValState))
+    (processArgs null state (argList node) throw
+                 (lambda (evalArgs evalState)
                    (return ((convertOperator (operator node)) evalArgs) evalState)
                    )
                  )
     )
   )
 
+
+; Takes in a list of evaluated arguments (typically null on first call), an initial state,
+; unprocessed arguments (formal parameters), and the throw and return continuations.
+; If nothing is thrown, returns the actual parameters and the updated with any side-effects state
 (define processArgs
-  (lambda (valState args throw return)
-    (define addArg (lambda (argVal valueState)
-      (list (append (getReturnValue valueState) (list argVal)) (getReturnState valueState))
-      ))
-    
+  (lambda (evald state args throw return)
     (if (null? args)
-        (return valState)
-        (evaluateExpression (car args) (getReturnState valState) throw
+        (return evald state)
+        (evaluateExpression (car args) state throw
                             (lambda (val retState)
-                              (processArgs (addArg val valState)
+                              (processArgs (append evald (list val))
+                                           retState
                                            (cdr args)
                                            throw
                                            return)
@@ -102,17 +41,6 @@
     )
   )
 
-(define getEvaluatedArgs
-  (lambda (argsState)
-    (car argsState)
-    )
-  )
-
-(define getEvaluatedState
-  (lambda (argsState)
-    (car (cdr argsState))
-    )
-  )
 
 ; Returns the appropriate evaluation of an expression (variable, literal, or nested expression)
 ; Input could be any expression
@@ -228,8 +156,8 @@
     ; Call the statementList evaluator with the environment on the body
     ; Note: return will provide a list where the 1st element is the returned value,
     ; and the 2nd is the environment at the time
-    (processArgs (list null state) actualParameters throw (lambda (evaldValState)
-                                                            (nextState (createEnvironment (getReturnValue evaldValState) closure state) (getBody closure)
+    (processArgs null state actualParameters throw (lambda (evalArgs evalState)
+                                                            (nextState (createEnvironment evalArgs closure state) (getBody closure)
                                                                        ; Next
                                                                        echo
                                                                        ; Break
