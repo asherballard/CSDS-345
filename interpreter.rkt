@@ -31,14 +31,6 @@
        )]
 
       ; If assignment, add it to the state
-      #|[(eq? 'var op) (if (isLive? (primary (argList statement)) state)
-                         (error "Variable already live")
-                         (processOuterLayer tail ((getStateMapping statement state) state))
-       )]
-      [(eq? '= op) (if (isDeclared? (primary (argList statement)) state)
-                       (processOuterLayer tail ((getStateMapping statement state) state))
-                       (error "Variable undeclared")
-                       )]|#
       [(eq? 'var op) (if (isLive? (primary (argList statement)) state)
                          (error "Variable already live")
                          (if (secondary? (argList statement))
@@ -51,6 +43,8 @@
                              (processOuterLayer tail (declare (primary (argList statement))))
                              )
        )]
+
+      ; I don't think this is allowed by the parser, but it's harmless to leave here just in case.
       [(eq? '= op) (if (isDeclared? (primary (argList statement)) state)
                        (evaluateExpression (secondary (argList statement)) state echoDouble (lambda (val retState)
                                                                                               (define nState (assign (primary (argList statement)) val retState))
