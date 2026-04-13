@@ -120,6 +120,24 @@
     )
   )
 
+(define updateHeritage
+  (lambda (callingState retState)
+    ; The scope difference between the old state and new state
+    (define callLength (length callingState))
+    (define retLength (length retState))
+    (define difference (- callLength retLength))
+
+    ; Non-negative difference means the calling state is longer, so we update the returned layers
+    (if (>= difference 0)
+        (append (cutAfterN-cps callingState difference echo) retState)
+        ; Negative difference means a longer returned state, so we safely trim excess layers
+        (trimStateTo callLength retState)
+        )
+    )
+  )
+
+
+
 ; =========================
 ; BINDING (STATE) FUNCTIONS
 ; =========================

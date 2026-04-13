@@ -141,10 +141,11 @@
   )
 
 (define not*
-  (lambda (x)
-    (if (eq? TRUE x)
-        FALSE
-        TRUE
+  (lambda (args)
+    (cond
+      [(eq? TRUE (primary args)) FALSE]
+      [(eq? FALSE (primary args)) TRUE]
+      [else (error "not* provided with invalid arguments")]
         )
     )
   )
@@ -167,7 +168,12 @@
 
 (define notEqual?
   (lambda (args)
-    (not* (equal? args))
+    (define result (equal? args))
+    (cond
+      [(eq? result TRUE) FALSE]
+      [(eq? result FALSE) TRUE]
+      [else (error "notEqual? provided with bad input")]
+        )
   )
 )
 

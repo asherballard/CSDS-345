@@ -17,9 +17,8 @@
     
     ; Get statement info once
     (define statement (if (null? statementList) null (currentStatement statementList)))
-    (define op (operator statement))
-    (define args (argList statement))
     (define tail (if (null? statementList) null (remainingStatements statementList)))
+    (define op (if (null? statement) null (operator statement)))
     
     (cond
       ; If we've reach the end of the outer layer, begin interpreting main
@@ -28,7 +27,7 @@
       ; If function, add its closure to the state
       [(eq? op 'function) (if (isLive? (primary (argList statement)) state)
                          (error "Function already declared in this (global) scope")
-                         (processOuterLayer tail (funcDeclare args state))
+                         (processOuterLayer tail (funcDeclare (argList statement) state))
        )]
 
       ; If assignment, add it to the state
@@ -50,7 +49,7 @@
 ; Evaluates the main() function with a given initial state
 (define runMain
   (lambda (state)
-    (callFunction 'main null state)
+    (getReturnValue (callFunction 'main null state))
     )
   )
 

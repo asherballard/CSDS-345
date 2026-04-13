@@ -132,3 +132,13 @@
          )
     )
   )
+
+
+(define cutAfterN-cps
+  (lambda (lis n return)
+    (if (eq? n 0)
+        (return null)
+        (cutAfterN-cps (cdr lis) (- n 1) (lambda (ret) (return (cons (car lis) ret))))
+        )
+    )
+  )
