@@ -169,8 +169,8 @@
                                                                        ; Throw
                                                                        (lambda (exception thrownState) (throw exception (updateHeritage state thrownState)))
                                                                        )
-                                                            )
-                                                            )
+                                                     )
+                 )
     )
   )
 
@@ -188,6 +188,7 @@
     (define args (argList statement))
     (define newState (next state))
     (define testTail (remainingStatements statementList))
+    ; Default return
     (define tail (if (null? testTail) (list '(return 0)) testTail))
     
     (cond

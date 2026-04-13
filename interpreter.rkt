@@ -3,7 +3,6 @@
 (require "state.rkt")
 (require "operators.rkt")
 (require "evaluators.rkt")
-(require "funcCall.rkt")
 (require "functionParser.rkt")
 (provide (all-defined-out))
 
@@ -62,7 +61,7 @@
 ; Evaluates the main() function with a given initial state
 (define runMain
   (lambda (state)
-    (getReturnValue (callFunction 'main null state echoDouble echoDouble))
+    (callFunction 'main null state echoDouble (lambda (finalValue finalState) finalValue))
     )
   )
 
