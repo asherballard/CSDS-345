@@ -34,9 +34,17 @@
 (define voidLayer (makePairedList EMPTY EMPTY))
 (define voidState (cons voidLayer null))
 
+; ===============
+; CLASS FUNCTIONS
+; ===============
+
+; Getters for class closures
+(define getClassFunctionState (lambda (closure) (ternary closure)))
+(define getClassStaticState (lambda (closure) (quaternary closure)))
+
 ; Create an instance closure
 (define instanceClosure (lambda (class valueList)
-                          
+                          (list class valueList)
                          ))
 
 ; Create a class closure
@@ -44,40 +52,59 @@
 ; the output state. However, we need to slightly modify the process by not calling evaluateExpression
 ; on variable declarations, and putting handling static declarations
 ; "fieldState" and "methodState" are accumulators, called with voidState initial values
-(define classClosure (lambda (parentClass classBody) (classClosureInternal parentClass classBody voidState voidState)))
-(define classClosureInternal (lambda (parentClass classBody fieldState methodState)
+(define classClosure (lambda (parentClass classBody) (classClosureInternal parentClass classBody voidState voidState voidState voidState)))
+(define classClosureInternal (lambda (parentClass classBody fieldState methodState staticState constructorState)
 
                        ; End of classBody, return the two states
-                       (if (null? classBody) (list parentClass fieldState methodState)
+                       (if (null? classBody) (list parentClass fieldState methodState staticState)
                            ; Not end of classBody, process current line and recurse
                            ; Use lambda application for efficiency
-                           ((lambda (statement op tail)
-                              
-                              
-                              
-                   
+                           ((lambda (op args tail)
                               (cond
+                                ; For constructors, they are identified by their arguments, so we use that list as its name
+                                ; in a "constructor state"
+                                [(eq? op 'constructor) (if (isLive? (primary args) constructorState)
+                                                           (error "Overloaded constructor")
+                                                           (classClosureInternal parentClass tail fieldState methodState staticState (constructorDeclare args constructorState))
+                                                           )]
+                                
                                 ; If function, add its closure to the methodState after checking for redeclare
-                                [(eq? op 'function) (if (isLive? (primary (argList statement)) methodState)
-                                                        (error "Function already declared in class scope")
-                                                        (classClosureInternal parentClass tail fieldState (funcDeclare (argList statement) methodState))
+                                [(eq? op 'function) (if (isLive? (primary args) methodState)
+                                                        (error "Function already declared in dynamic class scope")
+                                                        (classClosureInternal parentClass tail fieldState (funcDeclare args methodState) staticState constructorState)
+                                                        )]
+
+                                ; If it's a static function, we do the same, but for the static state
+                                [(eq? op 'static-function) (if (isLive? (primary args) staticState)
+                                                        (error "Function already declared in static class scope")
+                                                        (classClosureInternal parentClass tail fieldState methodState (funcDeclare args staticState) constructorState)
                                                         )]
 
                                 ; If variable assignment, add it to the field state
-                                [(eq? 'var op) (if (isLive? (primary (argList statement)) fieldState)
+                                [(eq? 'var op) (if (isLive? (primary args) fieldState)
                                                    (error "Variable already live")
-                                                   (if (secondary? (argList statement))
+                                                   (if (secondary? args)
                                                        ; If we have an expression, place it in
-                                                       (classClosureInternal parentClass tail (declareAssign (primary (argList statement)) (secondary (argList statement)) fieldState) methodState)
+                                                       (classClosureInternal parentClass
+                                                                             tail
+                                                                             (declareAssign (primary args) (secondary args) fieldState)
+                                                                             methodState
+                                                                             staticState
+                                                                             constructorState)
                                                        ; Otherwise, just declare it
-                                                       (classClosureInternal parentClass tail (declare (primary (argList statement)) fieldState) methodState)
+                                                       (classClosureInternal parentClass
+                                                                             tail
+                                                                             (declare (primary args) fieldState)
+                                                                             methodState
+                                                                             staticState
+                                                                             constructorState)
                                                        )
                                                    )]
                            )
                        )
-                            ; Lambda applied to:
-                            (currentStatement classBody)
+                            ; This lambda is applied to:
                             (operator (currentStatement classBody))
+                            (argList (currentStatement classBody))
                             (remainingStatements classBody)
                             )
                            )
@@ -137,6 +164,15 @@
     )
   )
 
+; To use funcDeclare abstractly
+(define constructorDeclare
+  (lambda (args state)
+    ; We use the constructor signature as its name, but funcDeclare expects
+    ; a name, args, then body, while the constuctor lacks any explicit name.
+    ; So we just cons the name on front to avoid rewriting every time funcDeclare was used.
+    (funcDeclare (cons (primary args) args) state)
+    )
+  )
 
 ; ==================
 ; FUNCTION FUNCTIONS

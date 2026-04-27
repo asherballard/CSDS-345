@@ -10,6 +10,7 @@
 (define primary car)
 (define secondary cadr)
 (define ternary caddr)
+(define quaternary cadddr)
 
 ; For making an arbitrary statementList a block
 (define makeBlock

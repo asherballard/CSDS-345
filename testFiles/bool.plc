@@ -1,0 +1,7 @@
+function not (a){
+    return !a;
+  }
+function main(){
+    var x = false;
+    return not(x);
+  }

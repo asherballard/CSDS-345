@@ -1,13 +1,6 @@
-class A {
-  var x = 6;
-  var y = 7;
-
-  function prod() {
-    return this.x * this.y;
-  }
-
-  function set2(a, b) {
-    x = a;
-    y = b;
+class B {
+  static function main() {
+    var b = new B();
+    return b;
   }
 }
