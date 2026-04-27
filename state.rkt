@@ -34,6 +34,56 @@
 (define voidLayer (makePairedList EMPTY EMPTY))
 (define voidState (cons voidLayer null))
 
+; Create an instance closure
+(define instanceClosure (lambda (class valueList)
+                          
+                         ))
+
+; Create a class closure
+; All we need for this is the class body, which we can basically "interpret" and then grab
+; the output state. However, we need to slightly modify the process by not calling evaluateExpression
+; on variable declarations, and putting handling static declarations
+; "fieldState" and "methodState" are accumulators, called with voidState initial values
+(define classClosure (lambda (parentClass classBody) (classClosureInternal parentClass classBody voidState voidState)))
+(define classClosureInternal (lambda (parentClass classBody fieldState methodState)
+
+                       ; End of classBody, return the two states
+                       (if (null? classBody) (list parentClass fieldState methodState)
+                           ; Not end of classBody, process current line and recurse
+                           ; Use lambda application for efficiency
+                           ((lambda (statement op tail)
+                              
+                              
+                              
+                   
+                              (cond
+                                ; If function, add its closure to the methodState after checking for redeclare
+                                [(eq? op 'function) (if (isLive? (primary (argList statement)) methodState)
+                                                        (error "Function already declared in class scope")
+                                                        (classClosureInternal parentClass tail fieldState (funcDeclare (argList statement) methodState))
+                                                        )]
+
+                                ; If variable assignment, add it to the field state
+                                [(eq? 'var op) (if (isLive? (primary (argList statement)) fieldState)
+                                                   (error "Variable already live")
+                                                   (if (secondary? (argList statement))
+                                                       ; If we have an expression, place it in
+                                                       (classClosureInternal parentClass tail (declareAssign (primary (argList statement)) (secondary (argList statement)) fieldState) methodState)
+                                                       ; Otherwise, just declare it
+                                                       (classClosureInternal parentClass tail (declare (primary (argList statement)) fieldState) methodState)
+                                                       )
+                                                   )]
+                           )
+                       )
+                            ; Lambda applied to:
+                            (currentStatement classBody)
+                            (operator (currentStatement classBody))
+                            (remainingStatements classBody)
+                            )
+                           )
+                       )
+  )
+
 
 ; =============
 ; STATE HELPERS
@@ -73,6 +123,17 @@
         state
         (matchLength (+ heightDifference -1) (tossActiveLayer state))
         )
+    )
+  )
+
+; To shorten declaring functions
+(define funcDeclare
+  (lambda (args state)
+    (define name (primary args))
+    (define formalParams (secondary args))
+    (define body (ternary args))
+      
+    (declareAssign name (createClosure formalParams body (length state)) state)
     )
   )
 

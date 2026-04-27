@@ -134,16 +134,6 @@
     )
   )
 
-; To shorten declaring functions
-(define funcDeclare
-  (lambda (args state)
-    (define name (primary args))
-    (define formalParams (secondary args))
-    (define body (ternary args))
-      
-    (declareAssign name (createClosure formalParams body (length state)) state)
-    )
-  )
 
 ; (M_value, M_state) of a function call.
 ; When returning, provides a list consisting of the value, and the environment at the time

@@ -97,6 +97,7 @@
 (define echo (lambda (v) v))
 (define echoDouble (lambda (x y) (list x y)))
 
+
 ; Applys a function f to each element in a list
 ; Then returns the list
 (define applyToEach-cps
