@@ -46,7 +46,7 @@
 ; Input could be any expression
 ; To allow for side-effects, will also return a state as the 2nd element in a list
 (define evaluateExpression
-  (lambda (node state throw return compileType callType)
+  (lambda (node state throw return)
      (cond
        ; ==========
        ; Is the expression a simple one? I.e. a number, boolean literal, or variable name
@@ -142,7 +142,7 @@
 ; When returning, provides a list consisting of the value, and the environment at the time
 ; When throwing, provides the updated environment at throw time
 (define callFunction
-  (lambda (closure actualParameters state throw return compileType callType)
+  (lambda (closure actualParameters state throw return)
     (define callingLevel (length state))
 
     ; Call the statementList evaluator with the environment on the body
@@ -155,7 +155,7 @@
                                                                        ; Break
                                                                        (lambda (brokenState) (error "Break outside of a loop"))
                                                                        ; Continue
-                                                                       (lambda (continuedState) (error "Continue outsie of a loop"))
+                                                                       (lambda (continuedState) (error "Continue outside of a loop"))
                                                                        ; Return
                                                                        (lambda (value returnedState) (return value (updateHeritage state returnedState)))
                                                                        ; Throw
@@ -179,7 +179,7 @@
     (define dynamicState (getClassDynamicState targetClass))
     (define constructorState (getClassConstructors targetClass))
     (if (isLive? (length fieldValues) constructorState)
-                        (callFunction (lookupBinding (length fieldValues) constructorState) fieldValues state throw return)
+                        (callFunction (lookupBinding (length fieldValues) constructorState) fieldValues (initializeNewLayer (peekActiveLayer dynamicState) state) throw return)
                         ; Empty constructor: instance with no values
                         (list (primary args))
                         )

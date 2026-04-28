@@ -1,6 +1,10 @@
 class B {
+  var x;
+  B(a) {
+      x = 5;
+    }
   static function main() {
-    var b = new B();
+    var b = new B(3);
     return b;
   }
 }

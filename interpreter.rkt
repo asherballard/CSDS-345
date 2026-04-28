@@ -12,14 +12,14 @@
 
 ; Turns the arguments of "class" into a closure
 (define getClassClosure
-  (lambda (classArgs)
+  (lambda (classArgs scopeLevel)
     ; If class does not extend anything, we use "Object" as Java does. This is arbitrary.
     (define superClass (if (null? (secondary classArgs))
                            'Object
                            (primary (argList (secondary classArgs)))
                            ))
     
-    (classClosure superClass (ternary classArgs))
+    (classClosure superClass (ternary classArgs) scopeLevel)
     )
   )
 
@@ -34,7 +34,7 @@
     
     (if finished
         state
-        (getClassListInternal (remainingStatements classList) (declareAssign className (getClassClosure classArgs) state))
+        (getClassListInternal (remainingStatements classList) (declareAssign className (getClassClosure classArgs (length state)) state))
         )
     ))
 

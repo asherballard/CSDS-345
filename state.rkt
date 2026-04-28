@@ -44,8 +44,8 @@
 (define getClassConstructors (lambda (closure) (quaternary closure)))
 
 ; Create an instance closure
-(define instanceClosure (lambda (class valueList)
-                          (list class valueList)
+(define instanceClosure (lambda (class valueState)
+                          (list class valueState)
                          ))
 
 ; Create a class closure
@@ -53,10 +53,10 @@
 ; the output state. However, we need to slightly modify the process by not calling evaluateExpression
 ; on variable declarations, and putting handling static declarations
 ; "fieldState" and "methodState" are accumulators, called with voidState initial values
-(define classClosure (lambda (parentClass classBody) (classClosureInternal parentClass classBody voidState voidState voidState)))
-(define classClosureInternal (lambda (parentClass classBody dynamicState staticState constructorState)
+(define classClosure (lambda (parentClass classBody scopeLevel) (classClosureInternal parentClass classBody voidState voidState voidState scopeLevel)))
+(define classClosureInternal (lambda (parentClass classBody dynamicState staticState constructorState scopeLevel)
 
-                       ; End of classBody, return the two states
+                       ; End of classBody, return
                        (if (null? classBody) (list parentClass dynamicState staticState constructorState)
                            ; Not end of classBody, process current line and recurse
                            ; Use lambda application for efficiency
@@ -64,21 +64,21 @@
                               (cond
                                 ; For constructors, they are identified by the length of their arguments, so for
                                 ; ease of searching we use that number as its "name" in a "constructor state"
-                                [(eq? op 'constructor) (if (isLive? (length args) constructorState)
+                                [(eq? op 'constructor) (if (isLive? (length (primary args)) constructorState)
                                                            (error "Overloaded constructor")
-                                                           (classClosureInternal parentClass tail dynamicState staticState (constructorDeclare args constructorState))
+                                                           (classClosureInternal parentClass tail dynamicState staticState (declareAssign (length (primary args)) (constructorClosure args scopeLevel) constructorState) scopeLevel)
                                                            )]
                                 
                                 ; If function, add its closure to the methodState after checking for redeclare
                                 [(eq? op 'function) (if (isLive? (primary args) dynamicState)
                                                         (error "Function already declared in dynamic class scope")
-                                                        (classClosureInternal parentClass tail (funcDeclare args dynamicState) staticState constructorState)
+                                                        (classClosureInternal parentClass tail (funcDeclare args (initializeNewLayer (peekActiveLayer dynamicState) )) staticState constructorState scopeLevel)
                                                         )]
 
                                 ; If it's a static function, we do the same, but for the static state
                                 [(eq? op 'static-function) (if (isLive? (primary args) staticState)
                                                         (error "Function already declared in static class scope")
-                                                        (classClosureInternal parentClass tail dynamicState (funcDeclare args staticState) constructorState)
+                                                        (classClosureInternal parentClass tail dynamicState (funcDeclare args staticState) constructorState scopeLevel)
                                                         )]
 
                                 ; If variable assignment, add it to the dynamic state
@@ -90,13 +90,15 @@
                                                                              tail
                                                                              (declareAssign (primary args) (secondary args) dynamicState)
                                                                              staticState
-                                                                             constructorState)
+                                                                             constructorState
+                                                                             scopeLevel)
                                                        ; Otherwise, just declare it
                                                        (classClosureInternal parentClass
                                                                              tail
                                                                              (declare (primary args) dynamicState)
                                                                              staticState
-                                                                             constructorState)
+                                                                             constructorState
+                                                                             scopeLevel)
                                                        )
                                                    )]
 
@@ -165,12 +167,12 @@
     )
   )
 
-; To use funcDeclare for constructors without rewriting it
-(define constructorDeclare
-  (lambda (args state)
-    ; Constructors are "named" in the constructor state using the length of their paramter list
-    (define argsWithName (cons (length (primary args)) args))
-    (funcDeclare argsWithName state)
+; Creates the closure for a constructor
+(define constructorClosure
+  (lambda (args scopeLevel className)
+    (define parameters (primary args))
+    (define body (secondary args))
+    (createClosure parameters body (+ scopeLevel)
     )
   )
 
@@ -193,9 +195,9 @@
     )
   )
 
-(define createClosure
-  (lambda (formalParameters body scopeLevel)
-    (list formalParameters body scopeLevel)
+(define functionClosure
+  (lambda (formalParameters body scopeLevel className)
+    (list formalParameters body scopeLevel className)
     )
   )
 
