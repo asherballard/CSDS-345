@@ -42,11 +42,11 @@
   )
 
 
-; Returns the appropriate evaluation of an expression (variable, literal, or nested expression)
+; Returns the appropriate evaluation of an expression (variable, literal, object, or nested expression)
 ; Input could be any expression
 ; To allow for side-effects, will also return a state as the 2nd element in a list
 (define evaluateExpression
-  (lambda (node state throw return)
+  (lambda (node state throw return compileType callType)
      (cond
        ; ==========
        ; Is the expression a simple one? I.e. a number, boolean literal, or variable name
@@ -67,6 +67,9 @@
 
        ; Is it a function call?
        [(eq? 'funcall (operator node)) (callFunction (primary (argList node)) (cdr (argList node)) state throw return)]
+
+       ; Is it a constructor? Then call it
+       [(eq? 'new (operator node)) (callConstructor (argList node) state throw return)]
 
        ; Must be a condition
       [else (evaluateCondition node state throw return)]
@@ -139,7 +142,7 @@
 ; When returning, provides a list consisting of the value, and the environment at the time
 ; When throwing, provides the updated environment at throw time
 (define callFunction
-  (lambda (closure actualParameters state throw return)
+  (lambda (closure actualParameters state throw return compileType callType)
     (define callingLevel (length state))
 
     ; Call the statementList evaluator with the environment on the body
@@ -160,6 +163,26 @@
                                                                        )
                                                      )
                  )
+    )
+  )
+
+; =======
+; CLASSES
+; =======
+
+; Finds the relevant constructor for a class in the state, calls it,
+; and returns (Object, side-affected state)
+(define callConstructor
+  (lambda (args state throw return)
+    (define targetClass (lookupBinding (primary args) state))
+    (define fieldValues (remaining args))
+    (define dynamicState (getClassDynamicState targetClass))
+    (define constructorState (getClassConstructors targetClass))
+    (if (isLive? (length fieldValues) constructorState)
+                        (callFunction (lookupBinding (length fieldValues) constructorState) fieldValues state throw return)
+                        ; Empty constructor: instance with no values
+                        (list (primary args))
+                        )
     )
   )
 

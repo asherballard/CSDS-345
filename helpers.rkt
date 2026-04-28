@@ -41,6 +41,10 @@
 (define remainingStatements cdr)
 (define currentStatement car)
 
+; General-purpose abstraction to read like English
+(define remaining cdr)
+(define current car)
+
 
 ; Does argList have a next arg?
 (define secondary?

@@ -39,8 +39,9 @@
 ; ===============
 
 ; Getters for class closures
-(define getClassFunctionState (lambda (closure) (ternary closure)))
-(define getClassStaticState (lambda (closure) (quaternary closure)))
+(define getClassDynamicState (lambda (closure) (secondary closure)))
+(define getClassStaticState (lambda (closure) (ternary closure)))
+(define getClassConstructors (lambda (closure) (quaternary closure)))
 
 ; Create an instance closure
 (define instanceClosure (lambda (class valueList)
@@ -52,54 +53,54 @@
 ; the output state. However, we need to slightly modify the process by not calling evaluateExpression
 ; on variable declarations, and putting handling static declarations
 ; "fieldState" and "methodState" are accumulators, called with voidState initial values
-(define classClosure (lambda (parentClass classBody) (classClosureInternal parentClass classBody voidState voidState voidState voidState)))
-(define classClosureInternal (lambda (parentClass classBody fieldState methodState staticState constructorState)
+(define classClosure (lambda (parentClass classBody) (classClosureInternal parentClass classBody voidState voidState voidState)))
+(define classClosureInternal (lambda (parentClass classBody dynamicState staticState constructorState)
 
                        ; End of classBody, return the two states
-                       (if (null? classBody) (list parentClass fieldState methodState staticState)
+                       (if (null? classBody) (list parentClass dynamicState staticState constructorState)
                            ; Not end of classBody, process current line and recurse
                            ; Use lambda application for efficiency
                            ((lambda (op args tail)
                               (cond
-                                ; For constructors, they are identified by their arguments, so we use that list as its name
-                                ; in a "constructor state"
-                                [(eq? op 'constructor) (if (isLive? (primary args) constructorState)
+                                ; For constructors, they are identified by the length of their arguments, so for
+                                ; ease of searching we use that number as its "name" in a "constructor state"
+                                [(eq? op 'constructor) (if (isLive? (length args) constructorState)
                                                            (error "Overloaded constructor")
-                                                           (classClosureInternal parentClass tail fieldState methodState staticState (constructorDeclare args constructorState))
+                                                           (classClosureInternal parentClass tail dynamicState staticState (constructorDeclare args constructorState))
                                                            )]
                                 
                                 ; If function, add its closure to the methodState after checking for redeclare
-                                [(eq? op 'function) (if (isLive? (primary args) methodState)
+                                [(eq? op 'function) (if (isLive? (primary args) dynamicState)
                                                         (error "Function already declared in dynamic class scope")
-                                                        (classClosureInternal parentClass tail fieldState (funcDeclare args methodState) staticState constructorState)
+                                                        (classClosureInternal parentClass tail (funcDeclare args dynamicState) staticState constructorState)
                                                         )]
 
                                 ; If it's a static function, we do the same, but for the static state
                                 [(eq? op 'static-function) (if (isLive? (primary args) staticState)
                                                         (error "Function already declared in static class scope")
-                                                        (classClosureInternal parentClass tail fieldState methodState (funcDeclare args staticState) constructorState)
+                                                        (classClosureInternal parentClass tail dynamicState (funcDeclare args staticState) constructorState)
                                                         )]
 
-                                ; If variable assignment, add it to the field state
-                                [(eq? 'var op) (if (isLive? (primary args) fieldState)
+                                ; If variable assignment, add it to the dynamic state
+                                [(eq? 'var op) (if (isLive? (primary args) dynamicState)
                                                    (error "Variable already live")
                                                    (if (secondary? args)
                                                        ; If we have an expression, place it in
                                                        (classClosureInternal parentClass
                                                                              tail
-                                                                             (declareAssign (primary args) (secondary args) fieldState)
-                                                                             methodState
+                                                                             (declareAssign (primary args) (secondary args) dynamicState)
                                                                              staticState
                                                                              constructorState)
                                                        ; Otherwise, just declare it
                                                        (classClosureInternal parentClass
                                                                              tail
-                                                                             (declare (primary args) fieldState)
-                                                                             methodState
+                                                                             (declare (primary args) dynamicState)
                                                                              staticState
                                                                              constructorState)
                                                        )
                                                    )]
+
+                                [else (error "Unaccounted valid syntax")]
                            )
                        )
                             ; This lambda is applied to:
@@ -164,13 +165,12 @@
     )
   )
 
-; To use funcDeclare abstractly
+; To use funcDeclare for constructors without rewriting it
 (define constructorDeclare
   (lambda (args state)
-    ; We use the constructor signature as its name, but funcDeclare expects
-    ; a name, args, then body, while the constuctor lacks any explicit name.
-    ; So we just cons the name on front to avoid rewriting every time funcDeclare was used.
-    (funcDeclare (cons (primary args) args) state)
+    ; Constructors are "named" in the constructor state using the length of their paramter list
+    (define argsWithName (cons (length (primary args)) args))
+    (funcDeclare argsWithName state)
     )
   )
 

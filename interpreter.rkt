@@ -10,7 +10,7 @@
 ; INTERPRETER FUNCTIONS
 ; =====================
 
-; The "top level interpreter" which returns a class closure
+; Turns the arguments of "class" into a closure
 (define getClassClosure
   (lambda (classArgs)
     ; If class does not extend anything, we use "Object" as Java does. This is arbitrary.
@@ -32,7 +32,8 @@
     (define classArgs (if finished null (argList classStatement)))
     (define className (if finished null (primary classArgs)))
     
-    (if finished state
+    (if finished
+        state
         (getClassListInternal (remainingStatements classList) (declareAssign className (getClassClosure classArgs) state))
         )
     ))
