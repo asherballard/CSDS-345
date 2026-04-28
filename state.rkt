@@ -53,11 +53,11 @@
 ; the output state. However, we need to slightly modify the process by not calling evaluateExpression
 ; on variable declarations, and putting handling static declarations
 ; "fieldState" and "methodState" are accumulators, called with voidState initial values
-(define classClosure (lambda (parentClass classBody scopeLevel) (classClosureInternal parentClass classBody voidState voidState voidState scopeLevel)))
-(define classClosureInternal (lambda (parentClass classBody dynamicState staticState constructorState scopeLevel)
+(define classClosure (lambda (parentClass classBody className) (classClosureInternal parentClass classBody voidState voidState voidState voidState className)))
+(define classClosureInternal (lambda (parentClass classBody methodState fieldState staticState constructorState className)
 
                        ; End of classBody, return
-                       (if (null? classBody) (list parentClass dynamicState staticState constructorState)
+                       (if (null? classBody) (list parentClass methodState fieldState staticState constructorState)
                            ; Not end of classBody, process current line and recurse
                            ; Use lambda application for efficiency
                            ((lambda (op args tail)
@@ -66,19 +66,36 @@
                                 ; ease of searching we use that number as its "name" in a "constructor state"
                                 [(eq? op 'constructor) (if (isLive? (length (primary args)) constructorState)
                                                            (error "Overloaded constructor")
-                                                           (classClosureInternal parentClass tail dynamicState staticState (declareAssign (length (primary args)) (constructorClosure args scopeLevel) constructorState) scopeLevel)
+                                                           (classClosureInternal parentClass
+                                                                                 tail
+                                                                                 methodState
+                                                                                 fieldState
+                                                                                 staticState
+                                                                                 (declareAssign (length (primary args)) (constructorClosure args) constructorState)
+                                                                                 )
                                                            )]
                                 
-                                ; If function, add its closure to the methodState after checking for redeclare
+                                ; If non-static function, add its closure to the methodState after checking for redeclare
+                                ; Non-static functions have take the type of their caller as an additional parameter
                                 [(eq? op 'function) (if (isLive? (primary args) dynamicState)
                                                         (error "Function already declared in dynamic class scope")
-                                                        (classClosureInternal parentClass tail (funcDeclare args (initializeNewLayer (peekActiveLayer dynamicState) )) staticState constructorState scopeLevel)
+                                                        (classClosureInternal parentClass
+                                                                              tail
+                                                                              (funcDeclare args )
+                                                                              staticState
+                                                                              constructorState
+                                                                              )
                                                         )]
 
                                 ; If it's a static function, we do the same, but for the static state
                                 [(eq? op 'static-function) (if (isLive? (primary args) staticState)
                                                         (error "Function already declared in static class scope")
-                                                        (classClosureInternal parentClass tail dynamicState (funcDeclare args staticState) constructorState scopeLevel)
+                                                        (classClosureInternal parentClass
+                                                                              tail
+                                                                              dynamicState
+                                                                              (funcDeclare args staticState)
+                                                                              constructorState
+                                                                              scopeLevel)
                                                         )]
 
                                 ; If variable assignment, add it to the dynamic state
@@ -158,12 +175,12 @@
 
 ; To shorten declaring functions
 (define funcDeclare
-  (lambda (args state)
+  (lambda (args state compileType)
     (define name (primary args))
     (define formalParams (secondary args))
     (define body (ternary args))
       
-    (declareAssign name (createClosure formalParams body (length state)) state)
+    (declareAssign name (functionClosure formalParams body (length state) compileType) state)
     )
   )
 
@@ -172,7 +189,7 @@
   (lambda (args scopeLevel className)
     (define parameters (primary args))
     (define body (secondary args))
-    (createClosure parameters body (+ scopeLevel)
+    (createClosure parameters body (+ scopeLevel))
     )
   )
 

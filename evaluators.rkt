@@ -142,7 +142,7 @@
 ; When returning, provides a list consisting of the value, and the environment at the time
 ; When throwing, provides the updated environment at throw time
 (define callFunction
-  (lambda (closure actualParameters state throw return)
+  (lambda (closure actualParameters state throw return compileType instanceType)
     (define callingLevel (length state))
 
     ; Call the statementList evaluator with the environment on the body
