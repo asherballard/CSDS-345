@@ -39,14 +39,49 @@
 ; ===============
 
 ; Getters for class closures
-(define getClassDynamicState (lambda (closure) (secondary closure)))
-(define getClassStaticState (lambda (closure) (ternary closure)))
-(define getClassConstructors (lambda (closure) (quaternary closure)))
+(define getClassParent (lambda (closure) (primary closure)))
+(define getClassMethodState (lambda (closure) (secondary closure)))
+(define getClassFieldState (lambda (closure) (ternary closure)))
+(define getClassFieldList (lambda (closure) (car (peekActiveLayer (getClassFieldState closure)))))
+(define getClassStaticState (lambda (closure) (quaternary closure)))
+(define getClassConstructors (lambda (closure) (list-ref closure 4)))
+
+(define fieldFromClass (lambda (name className state)
+                         ((lambda (binding)
+                            (if (eq? binding EMPTY)
+                                (error "Attempted to access uninitialized field")
+                                binding
+                                ))
+                          (lookupBinding name (getClassFieldState (lookupBinding className state))))
+                         )
+  )
+
+(define methodFromClass (lambda (name className state)
+                          (lookupBinding name (getClassMethodState (lookupBinding className state)))
+                          )
+  )
 
 ; Create an instance closure
-(define instanceClosure (lambda (class valueState)
-                          (list class valueState)
+(define instanceClosure (lambda (class valueList)
+                          (cons class valueList)
                          ))
+
+(define instanceValues (lambda (instance)
+                        (cdr instance)
+                        )
+  )
+
+(define instanceClass (lambda (instance)
+                        (car instance)
+                        )
+  )
+
+(define addThis (lambda (functionArgs)
+                  (cons (primary functionArgs) (cons (append (secondary functionArgs) '(this)) (cddr functionArgs)))
+                  )
+  )
+
+
 
 ; Create a class closure
 ; All we need for this is the class body, which we can basically "interpret" and then grab
@@ -55,80 +90,89 @@
 ; "fieldState" and "methodState" are accumulators, called with voidState initial values
 (define classClosure (lambda (parentClass classBody className) (classClosureInternal parentClass classBody voidState voidState voidState voidState className)))
 (define classClosureInternal (lambda (parentClass classBody methodState fieldState staticState constructorState className)
-
-                       ; End of classBody, return
-                       (if (null? classBody) (list parentClass methodState fieldState staticState constructorState)
-                           ; Not end of classBody, process current line and recurse
-                           ; Use lambda application for efficiency
-                           ((lambda (op args tail)
-                              (cond
-                                ; For constructors, they are identified by the length of their arguments, so for
-                                ; ease of searching we use that number as its "name" in a "constructor state"
-                                [(eq? op 'constructor) (if (isLive? (length (primary args)) constructorState)
-                                                           (error "Overloaded constructor")
-                                                           (classClosureInternal parentClass
-                                                                                 tail
-                                                                                 methodState
-                                                                                 fieldState
-                                                                                 staticState
-                                                                                 (declareAssign (length (primary args)) (constructorClosure args) constructorState)
-                                                                                 )
-                                                           )]
+                               ; End of classBody, return
+                               (if (null? classBody) (list parentClass methodState fieldState staticState constructorState)
+                                   ; Not end of classBody, process current line and recurse
+                                   ; Use lambda application for efficiency
+                                   ((lambda (op args tail)
+                                      (cond
+                                        ; For constructors, they are identified by the length of their arguments, so for
+                                        ; ease of searching we use that number as its "name" in a "constructor state"
+                                        [(eq? op 'constructor) (if (isLive? (length (primary args)) constructorState)
+                                                                   (error "Overloaded constructor")
+                                                                   (classClosureInternal parentClass
+                                                                                         tail
+                                                                                         methodState
+                                                                                         fieldState
+                                                                                         staticState
+                                                                                         (declareAssign (length (primary args)) (constructorClosure args className) constructorState)
+                                                                                         className
+                                                                                         )
+                                                                   )]
                                 
-                                ; If non-static function, add its closure to the methodState after checking for redeclare
-                                ; Non-static functions have take the type of their caller as an additional parameter
-                                [(eq? op 'function) (if (isLive? (primary args) dynamicState)
-                                                        (error "Function already declared in dynamic class scope")
-                                                        (classClosureInternal parentClass
-                                                                              tail
-                                                                              (funcDeclare args )
-                                                                              staticState
-                                                                              constructorState
-                                                                              )
-                                                        )]
+                                        ; If non-static function, add its closure to the methodState after checking for redeclare
+                                        ; Non-static functions have take the type of their caller as an additional parameter
+                                        [(eq? op 'function) (if (isLive? (primary args) methodState)
+                                                                (error "Function already declared in dynamic class scope")
+                                                                (classClosureInternal parentClass
+                                                                                      tail
+                                                                                      ; Add "this" to the formal parameters
+                                                                                      (funcDeclare (addThis args) methodState className)
+                                                                                      fieldState
+                                                                                      staticState
+                                                                                      constructorState
+                                                                                      className
+                                                                                      )
+                                                                )]
 
-                                ; If it's a static function, we do the same, but for the static state
-                                [(eq? op 'static-function) (if (isLive? (primary args) staticState)
-                                                        (error "Function already declared in static class scope")
-                                                        (classClosureInternal parentClass
-                                                                              tail
-                                                                              dynamicState
-                                                                              (funcDeclare args staticState)
-                                                                              constructorState
-                                                                              scopeLevel)
-                                                        )]
+                                        ; If it's a static function, we do the same, but don't add "this"
+                                        [(eq? op 'static-function) (if (isLive? (primary args) methodState)
+                                                                       (error "Function already declared in static class scope")
+                                                                       (classClosureInternal parentClass
+                                                                                             tail
+                                                                                             (funcDeclare args methodState className)
+                                                                                             fieldState
+                                                                                             staticState
+                                                                                             constructorState
+                                                                                             className
+                                                                                             )
+                                                                       )]
 
-                                ; If variable assignment, add it to the dynamic state
-                                [(eq? 'var op) (if (isLive? (primary args) dynamicState)
-                                                   (error "Variable already live")
-                                                   (if (secondary? args)
-                                                       ; If we have an expression, place it in
-                                                       (classClosureInternal parentClass
-                                                                             tail
-                                                                             (declareAssign (primary args) (secondary args) dynamicState)
-                                                                             staticState
-                                                                             constructorState
-                                                                             scopeLevel)
-                                                       ; Otherwise, just declare it
-                                                       (classClosureInternal parentClass
-                                                                             tail
-                                                                             (declare (primary args) dynamicState)
-                                                                             staticState
-                                                                             constructorState
-                                                                             scopeLevel)
-                                                       )
-                                                   )]
+                                        ; If variable assignment, add it to the dynamic state
+                                        [(eq? 'var op) (if (isLive? (primary args) fieldState)
+                                                           (error "Variable already live")
+                                                           (if (secondary? args)
+                                                               ; If we have an expression, place it in
+                                                               (classClosureInternal parentClass
+                                                                                     tail
+                                                                                     methodState
+                                                                                     (declareAssign (primary args) (secondary args) fieldState)
+                                                                                     staticState
+                                                                                     constructorState
+                                                                                     className
+                                                                                     )
+                                                               ; Otherwise, just declare it
+                                                               (classClosureInternal parentClass
+                                                                                     tail
+                                                                                     methodState
+                                                                                     (declare (primary args) fieldState)
+                                                                                     staticState
+                                                                                     constructorState
+                                                                                     className
+                                                                                     )
+                                                               )
+                                                           )]
 
-                                [else (error "Unaccounted valid syntax")]
-                           )
-                       )
-                            ; This lambda is applied to:
-                            (operator (currentStatement classBody))
-                            (argList (currentStatement classBody))
-                            (remainingStatements classBody)
-                            )
-                           )
-                       )
+                                        [else (error "Unaccounted valid syntax")]
+                                        )
+                                      )
+                                    ; This lambda is applied to:
+                                    (operator (currentStatement classBody))
+                                    (argList (currentStatement classBody))
+                                    (remainingStatements classBody)
+                                    )
+                                   )
+                               )
   )
 
 
@@ -186,10 +230,11 @@
 
 ; Creates the closure for a constructor
 (define constructorClosure
-  (lambda (args scopeLevel className)
+  (lambda (args className)
     (define parameters (primary args))
     (define body (secondary args))
-    (createClosure parameters body (+ scopeLevel))
+    ; Scope level for constructors is always "1" relative to their class
+    (functionClosure parameters body 1 className)
     )
   )
 
@@ -198,11 +243,19 @@
 ; ==================
 
 (define createEnvironment
-  (lambda (actualParameters closure state)
+  (lambda (actualParameters closure state caller)
     (addParameterLayer
      (getFormalParameters closure)
      actualParameters
-     (trimStateTo (getScopeLevel closure) state))
+   ;  ((lambda (heritage)
+     ;   (if (null? caller)
+      ;      heritage
+       ;     (declareAssign 'this (secondary caller) heritage)
+      ;      )
+      ;  )
+      (trimStateTo (getScopeLevel closure) state)
+      ;)
+     )
     )
   )
 
@@ -226,7 +279,12 @@
 
 (define getFormalParameters
   (lambda (closure)
-    (car closure)
+    #|((lambda (formalParameters) (if (and (not (null? formalParameters)) (eq? (getLastElement formalParameters) 'this))
+                                    (cutLast formalParameters)
+                                    formalParameters
+                                    ))|#
+     (car closure)
+     ;)
     )
   )
 
@@ -371,5 +429,12 @@
 (define tossActiveLayer
   (lambda (state)
     (stateHeritage state)
+    )
+  )
+
+; Makes a state out of a layer
+(define initializeNewState
+  (lambda (layer)
+    (list layer)
     )
   )

@@ -124,6 +124,34 @@
     )
   )
 
+; NOTE: 0-indexed
+(define replaceNth
+  (lambda (n replacement list)
+    (if (eq? n 0)
+        (cons replacement (cdr list))
+        (replaceNthRec (- n 1) replacement (car list) (cdr list))
+        )
+    )
+  )
+
+(define replaceNthRec
+  (lambda (n replacement front back)
+    (if (eq? n 0)
+        (append front replacement (cdr back))
+        (replaceNthRec (- n 1) replacement (append front (car back)) (cdr back))
+        )
+    )
+  )
+
+(define add2end-cps
+  (lambda (x lis return)
+          (if (null? lis)
+              (return (list x))
+              (add2end-cps x (cdr lis) (lambda (doneLis) (return (cons (car lis) doneLis))))
+              )
+          )
+  )
+         
 ; Makes a list '((x) (2)) instead of '((x) 2), for ease of state management
 (define makePairedList (lambda (first second) (cons first (cons second null))))
 
@@ -147,4 +175,15 @@
         (cutAfterN-cps (cdr lis) (- n 1) (lambda (ret) (return (cons (car lis) ret))))
         )
     )
+  )
+
+(define cutLast
+  (lambda (lis)
+          (cutAfterN-cps lis (- (length lis) 1) echo)
+          )
+  )
+
+(define getLastElement (lambda (list)
+                         (if (null? (cdr list)) (car list) (getLastElement (cdr list)))
+                         )
   )
